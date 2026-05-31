@@ -9,6 +9,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import time
 
+
 # --- LIBRERÍAS PARA EL SERVIDOR WEB FALSO (REQUERIDO POR RENDER) ---
 class FakeServer(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -33,10 +34,14 @@ threading.Thread(target=iniciar_servidor_falso, daemon=True).start()
 
 
 # --- CONFIGURACIÓN SEGURA MEDIANTE VARIABLES DE ENTORNO ---
-# En Render, configura estas variables en la sección "Environment" de tu servicio
-API_ID = int(os.environ.get("API_ID", 35589986))  
-API_HASH = os.environ.get("API_HASH", '245c358257a1df9097378c9673b471df')  
-BOT_TOKEN = os.environ.get("BOT_TOKEN", '8980070175:AAGHcydC2FcIXxGaEtC_gDszo-OVFkHectk')  
+# En Render, configura estas variables en la sección "Environment" de tu servicio.
+# Al quitar los valores por defecto, tu código queda 100% blindado contra filtraciones.
+try:
+    API_ID = int(os.environ["API_ID"])  
+    API_HASH = os.environ["API_HASH"]  
+    BOT_TOKEN = os.environ["BOT_TOKEN"]  
+except KeyError as e:
+    raise ValueError(f"❌ ERROR CRÍTICO DE SEGURIDAD: Falta configurar la variable de entorno obligatoria: {e} en Render.")
 
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
@@ -194,7 +199,7 @@ def recibir_orden_docs(message):
         bot.reply_to(message, "❌ Envía la placa o partida. Ejemplo: /partida CAJ270")
         return
         
-    placa = texto[1].upper().strip()
+    placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_PARTIDA"
     
     if entidad_df_vip:
@@ -218,7 +223,7 @@ def recibir_orden_imagenes(message):
         bot.reply_to(message, "❌ Envía la placa. Ejemplo: /placa CAJ270")
         return
         
-    placa = texto[1].upper().strip()
+    placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_PLACA"
     
     if entidad_franchesco:
@@ -244,7 +249,7 @@ def recibir_orden_tive_global(message):
         bot.reply_to(message, "❌ Envía la placa. Ejemplo: /tive CAJ270")
         return
         
-    placa = texto[1].upper().strip()
+    placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_TIVE"
     msg_carga = bot.reply_to(message, f"⚡ ¡Ráfaga /tive activada para {placa}!\nDisparando consultas a todos los proveedores...")
 
@@ -283,8 +288,8 @@ def recibir_orden_boleta_global(message):
         bot.reply_to(message, "❌ Envía la placa. Ejemplo: /boleta CAJ270")
         return
         
-    placa = texto[1].upper().strip()
-    clave_operacion = f"{placa}_BOLETA" 
+    placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
+    clave_operacion = f"{placa}_BOLETA"
     msg_carga = None
     try:
         msg_carga = bot.reply_to(message, f"🧾 ¡Ráfaga /boleta activada para {placa}!\nDisparando consultas de boletas informativas...")
@@ -403,8 +408,8 @@ def recibir_orden_denuncias_global(message):
         bot.reply_to(message, "❌ Envía la placa. Ejemplo: /denuncias CAJ270")
         return
         
-    placa = texto[1].upper().strip()
-    clave_operacion = f"{placa}_DENUNCIAS" 
+    placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
+    clave_operacion = f"{placa}_DENUNCIAS"
     
     msg_carga = None
     try:
@@ -635,13 +640,17 @@ async def main():
                             placa_detectada = op_data["placa"]
                             break
                     elif origen_texto == "DF VIP":
-                        # Si el origen es una búsqueda de propiedades por DNI, aceptamos el mensaje directo sin exigir "MEXES"
+                        # Modificado para filtrar solo mensajes que tengan marcas correctas en /propiedades
                         if op_data["origen"] == "PARTIDADNI":
-                            op_encontrada = clave
-                            placa_detectada = op_data["placa"]
-                            break
+                            if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
+                                op_encontrada = clave
+                                placa_detectada = op_data["placa"]
+                                break
+                            else:
+                                continue
                         elif op_data["origen"] in ["PARTIDA", "PARTIDAV"]:
-                            if "MEXES" in texto_a_buscar:
+                            # Aceptamos el mensaje si contiene MEXES o PARTIDA
+                            if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
                                 op_encontrada = clave
                                 placa_detectada = op_data["placa"]
                                 break
@@ -649,11 +658,14 @@ async def main():
                                 continue
                             
                     elif origen_texto == "FRANCHESCO":
-                        # Permitir que las respuestas de propiedades por DNI pasen sin la restricción estricta de "MEXES"
+                        # Modificado para filtrar solo mensajes que tengan marcas correctas en /propiedades
                         if op_data["origen"] == "PARTIDADNI":
-                            op_encontrada = clave
-                            placa_detectada = op_data["placa"]
-                            break
+                            if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
+                                op_encontrada = clave
+                                placa_detectada = op_data["placa"]
+                                break
+                            else:
+                                continue
                         elif "MEXES" in texto_a_buscar:
                             if op_data["origen"] in ["PLACA", "TIVE", "BOLETA", "DENUNCIAS"]:
                                 op_encontrada = clave
@@ -766,7 +778,8 @@ async def main():
             palabras_carga = [
                 "BUSCANDO", "PROCESANDO", "ESPERE", "CONSULTANDO", "RECIBIDO", 
                 "UN MOMENTO", "BUSQUEDA ACTIVADA", "SOLICITUD RECIBIDA", "CRÉDITOS RESTANTES",
-                "OBTENIENDO LA TIVE", "OBTENIENDO", "𝐄𝐬𝐭𝐚𝐦𝐨𝐬 𝐩𝐫𝐨𝐜𝐞𝐬𝐚𝐧𝐝𝐨", "𝐔𝐧 𝐦ο𝐦𝐞𝐧𝐭ο"
+                "OBTENIENDO LA TIVE", "OBTENIENDO", "𝐄𝐬𝐭𝐚𝐦𝐨𝐬 𝐩𝐫𝐨𝐜𝐞𝐬𝐚𝐧𝐝𝐨", "𝐔𝐧 𝐦ο𝐦𝐞𝐧𝐭ο",
+                "OBTENIENDO LA TIVE DE LA"
             ]
             if any(carga in texto_grupo for carga in palabras_carga): return
 
@@ -790,7 +803,33 @@ async def main():
                 es_error_df = "NO SE ENCONTRÓ" in texto_grupo or "NO SE ENCONTRO" in texto_grupo or "ERROR" in texto_grupo or "NO EXISTE" in texto_grupo
                 
                 if es_error_df:
-                    print(f"❌ [DF VIP] Reportó error para la operación {placa_detectada}.")
+                    print(f"❌ [DF VIP] Reportó falta de datos para {placa_detectada}.")
+                    
+                    # SI FALLÓ EL TIVE, CORREMOS LA LOGICA DE RETARDO Y ADVERTENCIA
+                    if comando_origen == "TIVE":
+                        print(f"🔄 [DF VIP CONTROLADO] TIVE no encontrada. Avisando y programando /partidav en 12s...")
+                        
+                        # 1. Enviar el mensaje inmediato al usuario avisando que no tenía TIVE con parseo HTML activo
+                        bot.send_message(
+                            chat_id_hugo, 
+                            f"⚠️ <b>Aviso [DF VIP]:</b>\n🏁 Placa: <code>{placa_detectada}</code>\n\n❌ No se encontró la TIVE. Esperando 12 segundos para consultar Partida...",
+                            parse_mode="HTML"
+                        )
+                        
+                        # 2. Definimos una pequeña subtarea asíncrona para esperar y disparar el comando
+                        async def ejecutar_respaldo_partida(id_grupo, placa, clave_op):
+                            await asyncio.sleep(12)
+                            global control_operaciones
+                            if clave_op in control_operaciones:
+                                print(f"🚀 [DF VIP] Pasaron los 12s. Soltando comando: /partidav {placa}")
+                                control_operaciones[clave_op]["origen"] = "PARTIDAV"
+                                await client.send_message(id_grupo, f"/partidav {placa}")
+                        
+                        # Lanzamos la espera en el loop principal para no bloquear el flujo del bot
+                        asyncio.run_coroutine_threadsafe(ejecutar_respaldo_partida(id_df_vip, placa_detectada, op_encontrada), loop_principal)
+                        return
+                    
+                    # Si ya falló estando en PARTIDAV, DENUNCIAS o PARTIDADNI, cerramos la operación normalmente
                     if comando_origen in ["PARTIDAV", "DENUNCIAS", "PARTIDADNI"]:
                         msg_carga = control_operaciones[op_encontrada].get("msg_carga")
                         if msg_carga:
@@ -800,9 +839,14 @@ async def main():
                     bot.send_message(chat_id_hugo, f"⚠️ Resultado [{origen_texto}]:\n🏁 Placa: `{placa_detectada}`\n\n❌ No se encontró información o registros en este proveedor.")
                     verificar_y_marcar_respuesta(op_encontrada, origen_texto)
                     return
+                    
                 elif comando_origen == "PARTIDAV":
-                    print(f"🤫 Texto plano intermedio de DF VIP ignorado para {placa_detectada}. Esperando el PDF original...")
-                    return
+                    # Si tiene marcas de que es el reporte final en texto plano, lo dejamos pasar
+                    if "MEXES" in texto_grupo or "PARTIDA" in texto_grupo:
+                        print(f"✅ [DF VIP] Detectado texto plano final de Partida para {placa_detectada}.")
+                    else:
+                        print(f"🤫 Texto plano intermedio de DF VIP ignorado para {placa_detectada}. Esperando el reporte...")
+                        return
 
             if origen_texto == "NORTH DATA":
                 es_error_north = (
@@ -812,24 +856,41 @@ async def main():
                     "NO SE ENCONTRO" in texto_grupo or
                     "NO SE HALLARON" in texto_grupo or
                     "ERROR" in texto_grupo or 
-                    "NO EXISTE" in texto_grupo
+                    "NO EXISTE" in texto_grupo or
+                    "NO CUENTA CON TIVE" in texto_grupo
                 )
                 
                 if es_error_north:
                     print(f"❌ [NORTH DATA] Reportó falta de datos para {placa_detectada}. Reenviando alerta...")
                     
                     texto_original = event.message.text
-                    lineas = texto_original.split('\n')
-                    lineas_limpias = []
-                    for linea in lineas:
-                        if "CONSULTADO POR" in linea.upper() or "CREDITOS" in linea.upper(): break
-                        lineas_limpias.append(linea)
-                    reporte_recortado = "\n".join(lineas_limpias).strip()
-                    if not reporte_recortado: reporte_recortado = texto_original.strip()
+                    
+                    # Si el mensaje contiene explícitamente que no cuenta con TIVE, extraemos esa línea exacta
+                    if "NO CUENTA CON TIVE" in texto_original.upper():
+                        lineas = texto_original.split('\n')
+                        reporte_recortado = ""
+                        for linea in lineas:
+                            if "NO CUENTA CON TIVE" in linea.upper():
+                                # Preservamos la línea tal cual viene del proveedor original
+                                reporte_recortado = linea.strip()
+                                break
+                        if not reporte_recortado:
+                            reporte_recortado = "⚠️ El vehículo no cuenta con TIVE."
+                    else:
+                        # Comportamiento de recorte por defecto para otros errores de North Data
+                        lineas = texto_original.split('\n')
+                        lineas_limpias = []
+                        for linea in lineas:
+                            if "CONSULTADO POR" in linea.upper() or "CREDITOS" in linea.upper(): break
+                            lineas_limpias.append(linea)
+                        reporte_recortado = "\n".join(lineas_limpias).strip()
+                    
+                    if not reporte_recortado: 
+                        reporte_recortado = texto_original.strip()
                     
                     bot.send_message(
                         chat_id_hugo, 
-                        f"📢 Respuesta de [{origen_texto}]:\n🏁 Placa/Partida: <code>{placa_detectada}</code>\n\n{reporte_recortado}",
+                        f"📢 <b>Respuesta de [{origen_texto}]:</b>\n🏁 Placa/Partida: <code>{placa_detectada}</code>\n\n{reporte_recortado}",
                         parse_mode="HTML"
                     )
                     
