@@ -34,8 +34,6 @@ threading.Thread(target=iniciar_servidor_falso, daemon=True).start()
 
 
 # --- CONFIGURACIÓN SEGURA MEDIANTE VARIABLES DE ENTORNO ---
-# En Render, configura estas variables en la sección "Environment" de tu servicio.
-# Al quitar los valores por defecto, tu código queda 100% blindado contra filtraciones.
 try:
     API_ID = int(os.environ["API_ID"])  
     API_HASH = os.environ["API_HASH"]  
@@ -53,7 +51,6 @@ USER_LIAM_BOT  = "Yinwodataa_bot"
 
 from telethon.sessions import StringSession
 
-# Recuperamos la sesión en texto plano desde las variables de entorno de Render
 SESSION_STRING = os.environ.get("SESSION_STRING", None)
 
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -86,8 +83,6 @@ async def mapear_motores_por_id():
     global entidad_franchesco, entidad_df_vip, entidad_north_bot, entidad_liam_bot
     global id_franchesco, id_df_vip, id_north_bot, id_liam_bot
     
-    # client.start() sin parámetros puede congelarse en Render si no hay terminal activa.
-    # Conectamos de forma directa y segura.
     if not client.is_connected():
         await client.connect()
     
@@ -460,7 +455,7 @@ def generar_menu_principal(first_name):
     texto = (
         f"Hola, <b>{first_name}</b>\n\n"
         "💻 <b>[ PANEL DE COMANDOS ]</b>\n\n"
-        "Bienvenido a este <b>BOT VEHICULAR </b>de uso exclusivo para informes y sacar documentos especificos muy constantes a un click. \n\n "
+        "Bienvenido a este <b>BOT VEHICULAR </b>de uso exclusivo para informes y sacar documentos específicos muy constantes a un click. \n\n "
         " ✅ Creado y diseñado por mi 👨‍💻\n\n"
         "<b>Selecciona una opción según la categoría que deseas explorar.</b>\n\n"
     )
@@ -543,22 +538,17 @@ def responder_clicks_botones(call):
                     
             asyncio.run_coroutine_threadsafe(presionar_boton_remoto(), loop_principal)
 
-import time
 
 def arrancar_bot_padre():
-    # 1. Eliminamos cualquier webhook o consultas colgadas en los servidores de Telegram
     try:
         print("🗑️ Limpiando consultas previas en Telegram para evitar conflictos...")
         bot.remove_webhook()
     except Exception as e:
         print(f"⚠️ Aviso al limpiar Webhook: {e}")
         
-    # 2. Bucle infinito controlado contra el Error 409
     while True:
         try:
             print("🤖 Servidor Telebot iniciando polling infinity...")
-            # En pyTelegramBotAPI, para ignorar mensajes viejos acumulados en ráfaga se usa 'none_stop=True' 
-            # y se le pasan los parámetros de control correctos sin romper el constructor.
             bot.infinity_polling(
                 timeout=60, 
                 long_polling_timeout=60, 
@@ -640,7 +630,6 @@ async def main():
                             placa_detectada = op_data["placa"]
                             break
                     elif origen_texto == "DF VIP":
-                        # Modificado para filtrar solo mensajes que tengan marcas correctas en /propiedades
                         if op_data["origen"] == "PARTIDADNI":
                             if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
                                 op_encontrada = clave
@@ -649,7 +638,6 @@ async def main():
                             else:
                                 continue
                         elif op_data["origen"] in ["PARTIDA", "PARTIDAV"]:
-                            # Aceptamos el mensaje si contiene MEXES o PARTIDA
                             if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
                                 op_encontrada = clave
                                 placa_detectada = op_data["placa"]
@@ -658,7 +646,6 @@ async def main():
                                 continue
                             
                     elif origen_texto == "FRANCHESCO":
-                        # Modificado para filtrar solo mensajes que tengan marcas correctas en /propiedades
                         if op_data["origen"] == "PARTIDADNI":
                             if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
                                 op_encontrada = clave
@@ -692,7 +679,6 @@ async def main():
                 
             ruta = await event.message.download_media(file=nombre_original)
             
-            # Detectamos si es DNI o Placa para armar un mejor diseño de mensaje
             tipo_identificador = "👤 DNI" if control_operaciones[op_encontrada]["origen"] == "PARTIDADNI" else "🏁 Placa/Partida"
             caption_personalizado = f"📄 <b>Resultado ({origen_texto}):</b>\n{tipo_identificador}: <code>{placa_detectada}</code>"
             
@@ -730,7 +716,7 @@ async def main():
             try:
                 if "ESTADO DE CUENTA" in caption_proveedor.upper():
                     partes = re.split(r'(?i)\[⚡\]\s*ESTADO DE CUENTA|ESTADO DE CUENTA', caption_proveedor)
-                    caption_proveedor = partes[0].strip()
+                    caption_proveedor = part[0].strip()
                 
                 caption_final = f"📸 Reporte de [{origen_texto}]:\n\n{caption_proveedor}"
 
@@ -805,31 +791,29 @@ async def main():
                 if es_error_df:
                     print(f"❌ [DF VIP] Reportó falta de datos para {placa_detectada}.")
                     
-                    # SI FALLÓ EL TIVE, CORREMOS LA LOGICA DE RETARDO Y ADVERTENCIA
+                    # SI FALLÓ EL TIVE, CORREMOS LA LOGICA DE RETARDO Y ADVERTENCIA (AHORA 15 SEGUNDOS)
                     if comando_origen == "TIVE":
-                        print(f"🔄 [DF VIP CONTROLADO] TIVE no encontrada. Avisando y programando /partidav en 12s...")
+                        print(f"🔄 [DF VIP CONTROLADO] TIVE no encontrada. Avisando y programando /partidav en 15s...")
                         
-                        # 1. Enviar el mensaje inmediato al usuario avisando que no tenía TIVE con parseo HTML activo
+                        # 1. Enviar el mensaje inmediato al usuario avisando el cambio a 15 segundos
                         bot.send_message(
                             chat_id_hugo, 
-                            f"⚠️ <b>Aviso [DF VIP]:</b>\n🏁 Placa: <code>{placa_detectada}</code>\n\n❌ No se encontró la TIVE. Esperando 12 segundos para consultar Partida...",
+                            f"⚠️ <b>Aviso [DF VIP]:</b>\n🏁 Placa: <code>{placa_detectada}</code>\n\n❌ No se encontró la TIVE. Esperando 15 segundos para consultar Partida...",
                             parse_mode="HTML"
                         )
                         
-                        # 2. Definimos una pequeña subtarea asíncrona para esperar y disparar el comando
+                        # 2. Definimos la subtarea asíncrona con la espera ajustada a 15s
                         async def ejecutar_respaldo_partida(id_grupo, placa, clave_op):
-                            await asyncio.sleep(12)
+                            await asyncio.sleep(15)  # <--- CAMBIADO DE 12 A 15 SEGUNDOS
                             global control_operaciones
                             if clave_op in control_operaciones:
-                                print(f"🚀 [DF VIP] Pasaron los 12s. Soltando comando: /partidav {placa}")
+                                print(f"🚀 [DF VIP] Pasaron los 15s. Soltando comando: /partidav {placa}")
                                 control_operaciones[clave_op]["origen"] = "PARTIDAV"
                                 await client.send_message(id_grupo, f"/partidav {placa}")
                         
-                        # Lanzamos la espera en el loop principal para no bloquear el flujo del bot
                         asyncio.run_coroutine_threadsafe(ejecutar_respaldo_partida(id_df_vip, placa_detectada, op_encontrada), loop_principal)
                         return
                     
-                    # Si ya falló estando en PARTIDAV, DENUNCIAS o PARTIDADNI, cerramos la operación normalmente
                     if comando_origen in ["PARTIDAV", "DENUNCIAS", "PARTIDADNI"]:
                         msg_carga = control_operaciones[op_encontrada].get("msg_carga")
                         if msg_carga:
@@ -841,7 +825,6 @@ async def main():
                     return
                     
                 elif comando_origen == "PARTIDAV":
-                    # Si tiene marcas de que es el reporte final en texto plano, lo dejamos pasar
                     if "MEXES" in texto_grupo or "PARTIDA" in texto_grupo:
                         print(f"✅ [DF VIP] Detectado texto plano final de Partida para {placa_detectada}.")
                     else:
@@ -865,19 +848,16 @@ async def main():
                     
                     texto_original = event.message.text
                     
-                    # Si el mensaje contiene explícitamente que no cuenta con TIVE, extraemos esa línea exacta
                     if "NO CUENTA CON TIVE" in texto_original.upper():
                         lineas = texto_original.split('\n')
                         reporte_recortado = ""
                         for linea in lineas:
                             if "NO CUENTA CON TIVE" in linea.upper():
-                                # Preservamos la línea tal cual viene del proveedor original
                                 reporte_recortado = linea.strip()
                                 break
                         if not reporte_recortado:
                             reporte_recortado = "⚠️ El vehículo no cuenta con TIVE."
                     else:
-                        # Comportamiento de recorte por defecto para otros errores de North Data
                         lineas = texto_original.split('\n')
                         lineas_limpias = []
                         for linea in lineas:
@@ -969,15 +949,12 @@ async def main():
 if __name__ == '__main__':
     print("Iniciando sistema multimotor seguro...")
     
-    # 1. Lanzamos el bot de PyTelegramBotAPI (Telebot) en su propio hilo independiente
     threading.Thread(target=arrancar_bot_padre, daemon=True).start()
     
-    # 2. Creamos y configuramos explícitamente el bucle asíncrono para el hilo principal (Evita el RuntimeError en Render)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
     try:
-        # 3. Corremos la función principal asíncrona de Telethon
         loop.run_until_complete(main())
     except KeyboardInterrupt:
         print("Bot detenido por el usuario.")
