@@ -8,15 +8,18 @@ import re
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import time
+# --- from dotenv import load_dotenv   --------------ESTO SE ACTIVA SOL PARA PRUEBAS
 
+# Esto carga las variables del archivo .env en la memoria del sistema operativo
+# --- load_dotenv()
 
-# --- LIBRERÍAS PARA EL SERVIDOR WEB FALSO (REQUERIDO POR RENDER) ---
+# --- LIBRERÍAS PARA EL SERVIDOR WEB FALSO (REQUERIDO POR RENDER) --- --------------ESTO SE ACTIVA SOL PARA PRUEBAS
 class FakeServer(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.send_header("Content-type", "text/plain; charset=utf-8")
         self.end_headers()
-        self.wfile.write("BOT HUGO ACTUALIZADO - VERSION 3.0 🚀".encode("utf-8"))
+        self.wfile.write("BOT HUGO ACTUALIZADO - VERSION 2.0 🚀".encode("utf-8"))
 
     def do_HEAD(self):
         self.send_response(200)
@@ -34,6 +37,8 @@ threading.Thread(target=iniciar_servidor_falso, daemon=True).start()
 
 
 # --- CONFIGURACIÓN SEGURA MEDIANTE VARIABLES DE ENTORNO ---
+# En Render, configura estas variables en la sección "Environment" de tu servicio.
+# Al quitar los valores por defecto, tu código queda 100% blindado contra filtraciones.
 try:
     API_ID = int(os.environ["API_ID"])  
     API_HASH = os.environ["API_HASH"]  
@@ -44,6 +49,7 @@ except KeyError as e:
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
 TXT_DF_VIP     = "DF VIP"
+TXT_KIMICO     = "KIMICO"  # Nueva palabra clave para el grupo Kimico
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
 USER_NORTH_BOT = "northdatabasicbot"
@@ -51,6 +57,7 @@ USER_LIAM_BOT  = "Yinwodataa_bot"
 
 from telethon.sessions import StringSession
 
+# Recuperamos la sesión en texto plano desde las variables de entorno de Render
 SESSION_STRING = os.environ.get("SESSION_STRING", None)
 
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -69,20 +76,24 @@ entidad_franchesco = None
 entidad_df_vip     = None
 entidad_north_bot  = None  
 entidad_liam_bot   = None
+entidad_kimico     = None  # Nueva entidad
 
 id_franchesco = None
 id_df_vip     = None
 id_north_bot  = None
 id_liam_bot   = None
+id_kimico     = None  # Nuevo ID
 
 control_operaciones = {}
 north_respondido_exito = {} 
 imagenes_procesadas_recientes = []  
 
 async def mapear_motores_por_id():
-    global entidad_franchesco, entidad_df_vip, entidad_north_bot, entidad_liam_bot
-    global id_franchesco, id_df_vip, id_north_bot, id_liam_bot
+    global entidad_franchesco, entidad_df_vip, entidad_north_bot, entidad_liam_bot, entidad_kimico
+    global id_franchesco, id_df_vip, id_north_bot, id_liam_bot, id_kimico
     
+    # client.start() sin parámetros puede congelarse en Render si no hay terminal activa.
+    # Conectamos de forma directa y segura.
     if not client.is_connected():
         await client.connect()
     
@@ -99,11 +110,15 @@ async def mapear_motores_por_id():
             if TXT_FRANCHESCO in nombre_chat and not entidad_franchesco:
                 entidad_franchesco = dialog.input_entity
                 id_franchesco = dialog.id
-                print(f"🎯 ID Franchesco Fijado: {id_franchesco} ({dialog.name})")
+                print(f"🎯 ID Franchesco Fijado: {id_franchesco} ({dialog.name})") #  Corregido a una sola 'e'
             elif TXT_DF_VIP in nombre_chat and not entidad_df_vip:
                 entidad_df_vip = dialog.input_entity
                 id_df_vip = dialog.id
                 print(f"🎯 ID DF VIP Fijado: {id_df_vip} ({dialog.name})")
+            elif TXT_KIMICO in nombre_chat and dialog.is_group and not entidad_kimico:
+                entidad_kimico = dialog.input_entity
+                id_kimico = dialog.id
+                print(f"🎯 ID KIMICO Grupo Fijado: {id_kimico} ({dialog.name})")
 
     try:
         entidad_north_bot = await client.get_input_entity(USER_NORTH_BOT)
@@ -236,7 +251,7 @@ def recibir_orden_imagenes(message):
 @bot.message_handler(commands=['tive'])
 def recibir_orden_tive_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
-    global entidad_df_vip, entidad_franchesco, entidad_north_bot, entidad_liam_bot
+    global entidad_df_vip, entidad_franchesco, entidad_north_bot, entidad_liam_bot, entidad_kimico
     
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
@@ -257,7 +272,8 @@ def recibir_orden_tive_global(message):
             "DF VIP": False,
             "FRANCHESCO": False,
             "NORTH DATA": False,
-            "LIAM DATA": False
+            "LIAM DATA": False,
+            "KIMICO": False  # Se añade KIMICO al control de respuestas
         }
     }
 
@@ -269,6 +285,9 @@ def recibir_orden_tive_global(message):
         asyncio.run_coroutine_threadsafe(flujo_especial_north(placa, clave_operacion), loop_principal)
     if entidad_liam_bot:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_liam_bot, f"/tive {placa}"), loop_principal)
+    if entidad_kimico:
+        # Para el grupo KIMICO enviamos el comando alternativo /pla
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/pla {placa}"), loop_principal)
 
     asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
 
@@ -455,7 +474,7 @@ def generar_menu_principal(first_name):
     texto = (
         f"Hola, <b>{first_name}</b>\n\n"
         "💻 <b>[ PANEL DE COMANDOS ]</b>\n\n"
-        "Bienvenido a este <b>BOT VEHICULAR </b>de uso exclusivo para informes y sacar documentos específicos muy constantes a un click. \n\n "
+        "Bienvenido a este <b>BOT VEHICULAR </b>de uso exclusivo para informes y sacar documentos especificos muy constantes a un click. \n\n "
         " ✅ Creado y diseñado por mi 👨‍💻\n\n"
         "<b>Selecciona una opción según la categoría que deseas explorar.</b>\n\n"
     )
@@ -538,17 +557,22 @@ def responder_clicks_botones(call):
                     
             asyncio.run_coroutine_threadsafe(presionar_boton_remoto(), loop_principal)
 
+import time
 
 def arrancar_bot_padre():
+    # 1. Eliminamos cualquier webhook o consultas colgadas en los servidores de Telegram
     try:
         print("🗑️ Limpiando consultas previas en Telegram para evitar conflictos...")
         bot.remove_webhook()
     except Exception as e:
         print(f"⚠️ Aviso al limpiar Webhook: {e}")
         
+    # 2. Bucle infinito controlado contra el Error 409
     while True:
         try:
             print("🤖 Servidor Telebot iniciando polling infinity...")
+            # En pyTelegramBotAPI, para ignorar mensajes viejos acumulados en ráfaga se usa 'none_stop=True' 
+            # y se le pasan los parámetros de control correctos sin romper el constructor.
             bot.infinity_polling(
                 timeout=60, 
                 long_polling_timeout=60, 
@@ -575,7 +599,7 @@ async def main():
     @client.on(events.NewMessage())
     async def escuchador_global_mensajes(event):
         global chat_id_hugo, control_operaciones, north_respondido_exito
-        global id_franchesco, id_df_vip, id_north_bot, id_liam_bot
+        global id_franchesco, id_df_vip, id_north_bot, id_liam_bot, id_kimico
         
         chat_actual_id = event.chat_id
         if not chat_id_hugo or not control_operaciones:
@@ -587,6 +611,7 @@ async def main():
         elif id_df_vip and chat_actual_id == id_df_vip: origen_texto = "DF VIP"
         elif id_north_bot and chat_actual_id == id_north_bot: origen_texto = "NORTH DATA"
         elif id_liam_bot and chat_actual_id == id_liam_bot: origen_texto = "LIAM DATA"
+        elif id_kimico and chat_actual_id == id_kimico: origen_texto = "KIMICO"  # Identifica el grupo
 
         if origen_texto == "DESCONOCIDO": return
 
@@ -630,6 +655,7 @@ async def main():
                             placa_detectada = op_data["placa"]
                             break
                     elif origen_texto == "DF VIP":
+                        # Modificado para filtrar solo mensajes que tengan marcas correctas en /propiedades
                         if op_data["origen"] == "PARTIDADNI":
                             if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
                                 op_encontrada = clave
@@ -638,6 +664,7 @@ async def main():
                             else:
                                 continue
                         elif op_data["origen"] in ["PARTIDA", "PARTIDAV"]:
+                            # Aceptamos el mensaje si contiene MEXES o PARTIDA
                             if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
                                 op_encontrada = clave
                                 placa_detectada = op_data["placa"]
@@ -646,6 +673,7 @@ async def main():
                                 continue
                             
                     elif origen_texto == "FRANCHESCO":
+                        # Modificado para filtrar solo mensajes que tengan marcas correctas en /propiedades
                         if op_data["origen"] == "PARTIDADNI":
                             if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
                                 op_encontrada = clave
@@ -658,6 +686,24 @@ async def main():
                                 op_encontrada = clave
                                 placa_detectada = op_data["placa"]
                                 break
+                            op_encontrada = clave
+                            placa_detectada = op_data["placa"]
+                            break
+                        else:
+                            continue
+
+                    # --- FILTRO Y ASIGNACIÓN PARA EL GRUPO KIMICO ---
+                    elif origen_texto == "KIMICO":
+                        # 1. Si el mensaje es un comando directo de otro usuario, lo ignoramos
+                        if texto_a_buscar.strip().startswith("/"):
+                            continue
+                        
+                        # 2. Comprobamos si el mensaje (o la descripción de la foto) tiene tus marcas
+                        tiene_formato_correcto = "CONSULTA DE PLACA" in texto_a_buscar
+                        es_tu_consulta = "MEXES" in texto_a_buscar or "HUGO" in texto_a_buscar
+                        
+                        # 3. Si es válido y corresponde a una ráfaga TIVE, lo capturamos
+                        if op_data["origen"] == "TIVE" and tiene_formato_correcto and es_tu_consulta:
                             op_encontrada = clave
                             placa_detectada = op_data["placa"]
                             break
@@ -679,6 +725,7 @@ async def main():
                 
             ruta = await event.message.download_media(file=nombre_original)
             
+            # Detectamos si es DNI o Placa para armar un mejor diseño de mensaje
             tipo_identificador = "👤 DNI" if control_operaciones[op_encontrada]["origen"] == "PARTIDADNI" else "🏁 Placa/Partida"
             caption_personalizado = f"📄 <b>Resultado ({origen_texto}):</b>\n{tipo_identificador}: <code>{placa_detectada}</code>"
             
@@ -692,13 +739,21 @@ async def main():
             verificar_y_marcar_respuesta(op_encontrada, origen_texto)
             return
 
-        elif event.message.media and event.message.photo and origen_texto == "FRANCHESCO":
+        elif event.message.media and event.message.photo and origen_texto in ["FRANCHESCO", "KIMICO"]:
             comando_origen = control_operaciones[op_encontrada]["origen"]
+            caption_proveedor = event.message.message if event.message.message else ""
             
-            if comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
+            # 1. Filtro para evitar banners publicitarios intermedios de FRANCHESCO
+            if origen_texto == "FRANCHESCO" and comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
                 print(f"🤫 Imagen publicitaria/secundaria omitida en ráfaga /{comando_origen.lower()} para {placa_detectada}.")
                 verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
                 return
+
+            # 2. NUEVO FILTRO: Evitar pantallas de carga intermedias de KIMICO o FRANCHESCO
+            palabras_carga_imagen = ["CONSULTANDO PLACA", "POR FAVOR ESPERA", "ESTAMOS PROCESANDO", "UN MOMENTO POR FAVOR"]
+            if any(carga in caption_proveedor.upper() for carga in palabras_carga_imagen):
+                print(f"⏳ [PROCESANDO] Se detectó pantalla de carga visual de {origen_texto} para {placa_detectada}. Ignorando y esperando el reporte real...")
+                return # Retornamos sin marcar como respondido para que siga escuchando
 
             caption_proveedor = event.message.message if event.message.message else ""
 
@@ -714,23 +769,31 @@ async def main():
             ruta_img = await event.message.download_media(file=f"{placa_detectada}.jpg")
             
             try:
-                if "ESTADO DE CUENTA" in caption_proveedor.upper():
-                    partes = re.split(r'(?i)\[⚡\]\s*ESTADO DE CUENTA|ESTADO DE CUENTA', caption_proveedor)
-                    caption_proveedor = part[0].strip()
-                
-                caption_final = f"📸 Reporte de [{origen_texto}]:\n\n{caption_proveedor}"
+                # 1. Si el reporte viene de KIMICO, vaciamos el texto para enviar solo la imagen limpia
+                if origen_texto == "KIMICO":
+                    caption_final = f"📸 Reporte de [KIMICO] 🏁 Placa: {placa_detectada}"
+                else:
+                    # Conservamos la lógica normal de limpieza de texto para FRANCHESCO
+                    if "ESTADO DE CUENTA" in caption_proveedor.upper():
+                        partes = re.split(r'(?i)\[⚡\]\s*ESTADO DE CUENTA|ESTADO DE CUENTA', caption_proveedor)
+                        caption_proveedor = partes[0].strip()
+                    
+                    caption_final = f"📸 Reporte de [FRANCHESCO]:\n\n{caption_proveedor}"
 
-                msg_carga = control_operaciones[op_encontrada].get("msg_carga")
-                if msg_carga:
-                    try:
-                        bot.delete_message(msg_carga.chat.id, msg_carga.message_id)
-                        print(f"🗑️ [CARGA ELIMINADA] Mensaje de espera borrado para {placa_detectada}.")
-                    except Exception as e:
-                        print(f"⚠️ No se pudo borrar el mensaje de carga: {e}")
+                # 2. Solo borramos el mensaje de carga si la foto es de FRANCHESCO
+                if origen_texto == "FRANCHESCO":
+                    msg_carga = control_operaciones[op_encontrada].get("msg_carga")
+                    if msg_carga:
+                        try:
+                            bot.delete_message(msg_carga.chat.id, msg_carga.message_id)
+                            print(f"🗑️ [CARGA ELIMINADA] Mensaje de espera borrado para {placa_detectada}.")
+                        except Exception as e:
+                            print(f"⚠️ No se pudo borrar el mensaje de carga: {e}")
 
+                # 3. Enviamos la foto al chat con el caption correspondiente (limpio para Kimico)
                 with open(ruta_img, 'rb') as foto_enviar:
                     bot.send_photo(chat_id_hugo, foto_enviar, caption=caption_final)
-                print(f"✅ [ÉXITO] Reporte final entregado en espejo para {placa_detectada}")
+                print(f"✅ [ÉXITO] Reporte final entregado en espejo para {placa_detectada} desde {origen_texto}")
                 
                 imagenes_procesadas_recientes.append(placa_detectada)
                 
@@ -791,29 +854,31 @@ async def main():
                 if es_error_df:
                     print(f"❌ [DF VIP] Reportó falta de datos para {placa_detectada}.")
                     
-                    # SI FALLÓ EL TIVE, CORREMOS LA LOGICA DE RETARDO Y ADVERTENCIA (AHORA 15 SEGUNDOS)
+                    # SI FALLÓ EL TIVE, CORREMOS LA LOGICA DE RETARDO Y ADVERTENCIA
                     if comando_origen == "TIVE":
                         print(f"🔄 [DF VIP CONTROLADO] TIVE no encontrada. Avisando y programando /partidav en 15s...")
                         
-                        # 1. Enviar el mensaje inmediato al usuario avisando el cambio a 15 segundos
+                        # 1. Enviar el mensaje inmediato al usuario avisando que no tenía TIVE con parseo HTML activo
                         bot.send_message(
                             chat_id_hugo, 
                             f"⚠️ <b>Aviso [DF VIP]:</b>\n🏁 Placa: <code>{placa_detectada}</code>\n\n❌ No se encontró la TIVE. Esperando 15 segundos para consultar Partida...",
                             parse_mode="HTML"
                         )
                         
-                        # 2. Definimos la subtarea asíncrona con la espera ajustada a 15s
+                        # 2. Definimos una pequeña subtarea asíncrona para esperar y disparar el comando
                         async def ejecutar_respaldo_partida(id_grupo, placa, clave_op):
-                            await asyncio.sleep(15)  # <--- CAMBIADO DE 12 A 15 SEGUNDOS
+                            await asyncio.sleep(15)
                             global control_operaciones
                             if clave_op in control_operaciones:
                                 print(f"🚀 [DF VIP] Pasaron los 15s. Soltando comando: /partidav {placa}")
                                 control_operaciones[clave_op]["origen"] = "PARTIDAV"
                                 await client.send_message(id_grupo, f"/partidav {placa}")
                         
+                        # Lanzamos la espera en el loop principal para no bloquear el flujo del bot
                         asyncio.run_coroutine_threadsafe(ejecutar_respaldo_partida(id_df_vip, placa_detectada, op_encontrada), loop_principal)
                         return
                     
+                    # Si ya falló estando en PARTIDAV, DENUNCIAS o PARTIDADNI, cerramos la operación normalmente
                     if comando_origen in ["PARTIDAV", "DENUNCIAS", "PARTIDADNI"]:
                         msg_carga = control_operaciones[op_encontrada].get("msg_carga")
                         if msg_carga:
@@ -825,6 +890,7 @@ async def main():
                     return
                     
                 elif comando_origen == "PARTIDAV":
+                    # Si tiene marcas de que es el reporte final en texto plano, lo dejamos pasar
                     if "MEXES" in texto_grupo or "PARTIDA" in texto_grupo:
                         print(f"✅ [DF VIP] Detectado texto plano final de Partida para {placa_detectada}.")
                     else:
@@ -848,16 +914,19 @@ async def main():
                     
                     texto_original = event.message.text
                     
+                    # Si el mensaje contiene explícitamente que no cuenta con TIVE, extraemos esa línea exacta
                     if "NO CUENTA CON TIVE" in texto_original.upper():
                         lineas = texto_original.split('\n')
                         reporte_recortado = ""
                         for linea in lineas:
                             if "NO CUENTA CON TIVE" in linea.upper():
+                                # Preservamos la línea tal cual viene del proveedor original
                                 reporte_recortado = linea.strip()
                                 break
                         if not reporte_recortado:
                             reporte_recortado = "⚠️ El vehículo no cuenta con TIVE."
                     else:
+                        # Comportamiento de recorte por defecto para otros errores de North Data
                         lineas = texto_original.split('\n')
                         lineas_limpias = []
                         for linea in lineas:
@@ -949,12 +1018,15 @@ async def main():
 if __name__ == '__main__':
     print("Iniciando sistema multimotor seguro...")
     
+    # 1. Lanzamos el bot de PyTelegramBotAPI (Telebot) en su propio hilo independiente
     threading.Thread(target=arrancar_bot_padre, daemon=True).start()
     
+    # 2. Creamos y configuramos explícitamente el bucle asíncrono para el hilo principal (Evita el RuntimeError en Render)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     
     try:
+        # 3. Corremos la función principal asíncrona de Telethon
         loop.run_until_complete(main())
     except KeyboardInterrupt:
         print("Bot detenido por el usuario.")
