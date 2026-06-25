@@ -11,10 +11,10 @@ import re
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import time
-# from dotenv import load_dotenv #  --------------ESTO SE ACTIVA SOL PARA PRUEBAS
+#from dotenv import load_dotenv #  --------------ESTO SE ACTIVA SOL PARA PRUEBAS
 
 # Esto carga las variables del archivo .env en la memoria del sistema operativo
-# load_dotenv()
+#load_dotenv()
 
 # --- LIBRERÍAS PARA EL SERVIDOR WEB FALSO (REQUERIDO POR RENDER) --- --------------ESTO SE ACTIVA SOL PARA PRUEBAS
 class FakeServer(BaseHTTPRequestHandler):
@@ -873,6 +873,10 @@ async def main():
             return
 
         elif event.message.text:
+            # 🔥 REGLA DE EXCLUSIÓN: Kimico solo procesa fotos. Si envía texto plano con tus marcas, lo ignoramos.
+            if origen_texto == "KIMICO":
+                return
+
             texto_grupo = event.message.text.upper()
             
             if texto_grupo.startswith(('/TIVE', '/TIV', '/PLA', '/PARTI', '/BOI', '/BOLI', '/BOLETA', '/DENPLA', '/DENUNV', '/PROP')) and len(texto_grupo) < 15 and not "NO SE" in texto_grupo: 
