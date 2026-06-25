@@ -1,5 +1,8 @@
 import telebot
+from telebot import apihelper  # Importamos el ayudante de la API
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+# 🔥 ACTIVACIÓN OBLIGATORIA DE MIDDLEWARES (Debe ir antes de crear el objeto 'bot')
+apihelper.ENABLE_MIDDLEWARE = True
 from telethon import TelegramClient, events
 import asyncio
 import os
@@ -8,10 +11,10 @@ import re
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import time
-# --- from dotenv import load_dotenv   --------------ESTO SE ACTIVA SOL PARA PRUEBAS
+# from dotenv import load_dotenv #  --------------ESTO SE ACTIVA SOL PARA PRUEBAS
 
 # Esto carga las variables del archivo .env en la memoria del sistema operativo
-# --- load_dotenv()
+# load_dotenv()
 
 # --- LIBRERÍAS PARA EL SERVIDOR WEB FALSO (REQUERIDO POR RENDER) --- --------------ESTO SE ACTIVA SOL PARA PRUEBAS
 class FakeServer(BaseHTTPRequestHandler):
@@ -61,6 +64,17 @@ from telethon.sessions import StringSession
 SESSION_STRING = os.environ.get("SESSION_STRING", None)
 
 bot = telebot.TeleBot(BOT_TOKEN)
+
+# 🔄 MIDDLEWARE DE TRADUCCIÓN: Convierte comandos a minúsculas automáticamente
+@bot.middleware_handler(update_types=['message'])
+def normalizar_comandos_minusculas(bot_instance, message):
+    if message.text and message.text.startswith('/'):
+        partes = message.text.split(maxsplit=1)
+        comando_minuscula = partes[0].lower()
+        if len(partes) > 1:
+            message.text = f"{comando_minuscula} {partes[1]}"
+        else:
+            message.text = comando_minuscula
 
 if SESSION_STRING:
     print("🔐 Iniciando Telethon mediante StringSession...")
@@ -319,7 +333,8 @@ def recibir_orden_boleta_global(message):
             "DF VIP": False,
             "FRANCHESCO": False,
             "NORTH DATA": False,
-            "LIAM DATA": False
+            "LIAM DATA": False,
+            "KIMICO": False
         }
     }
 
@@ -331,6 +346,9 @@ def recibir_orden_boleta_global(message):
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_liam_bot, f"/bolif {placa}"), loop_principal)
     if entidad_north_bot:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_north_bot, f"/bolinf {placa}"), loop_principal)
+    # CONDICIÓN para que también le escriba a Kimico
+    if entidad_kimico:
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/boleta {placa}"), loop_principal)
 
     asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
 
@@ -449,6 +467,43 @@ def recibir_orden_denuncias_global(message):
 
     asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
 
+@bot.message_handler(commands=['rq'])
+def recibir_orden_rq_global(message):
+    global chat_id_hugo, loop_principal, control_operaciones
+    global entidad_north_bot, entidad_kimico
+    
+    chat_id_hugo = message.chat.id  
+    texto = message.text.split()
+    if len(texto) < 2:
+        bot.reply_to(message, "❌ Envía la placa. Ejemplo: /rq CAJ270")
+        return
+        
+    placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
+    clave_operacion = f"{placa}_RQ"
+    
+    msg_carga = None
+    try:
+        msg_carga = bot.reply_to(message, f"🔍 ¡Consulta /rq activada para {placa}!\nDisparando solicitudes a North Data y Kimico...")
+    except Exception as network_error:
+        print(f"⚠️ Aviso: Retardo en la red al enviar mensaje de carga: {network_error}")
+
+    if not loop_principal: return
+    control_operaciones[clave_operacion] = {
+        "placa": placa,
+        "origen": "RQ", 
+        "msg_carga": msg_carga,
+        "motores": {
+            "NORTH DATA": False,
+            "KIMICO": False
+        }
+    }
+
+    if entidad_north_bot:
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_north_bot, f"/rqpla {placa}"), loop_principal)
+    if entidad_kimico:
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/rqpla {placa}"), loop_principal)
+
+    asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
 
 # =====================================================================
 # --- 🎛️ PANEL INTERACTIVO Y LOGICA DE BOTONES ---
@@ -514,7 +569,10 @@ def responder_clicks_botones(call):
             "• Ejemplo: /propiedades 44556677\n\n"
             "7️⃣ <b>BUSCA EL DNI POR NOMBRE </b>\n"
             "• Comando: /nombre [NOMBRE Y APELLIDO] \n"
-            "• Ejemplo: /nombre Cristian Condori Montoya"
+            "• Ejemplo: /nombre Cristian Condori Montoya\n\n"
+            "8️⃣ <b>CONSULTA REQUERIMIENTO (RQ)</b>\n"
+            "• Comando: /rq [placa] \n"
+            "• Ejemplo: /rq CAJ270"
         )
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=texto_vehiculos, parse_mode="HTML", reply_markup=markup_vehiculos)
     
@@ -650,7 +708,7 @@ async def main():
                             continue
 
                     if origen_texto == "NORTH DATA" or origen_texto == "LIAM DATA":
-                        if op_data["origen"] in ["TIVE", "BOLETA"]: 
+                        if op_data["origen"] in ["TIVE", "BOLETA", "RQ"]: 
                             op_encontrada = clave
                             placa_detectada = op_data["placa"]
                             break
@@ -673,15 +731,24 @@ async def main():
                                 continue
                             
                     elif origen_texto == "FRANCHESCO":
-                        # Modificado para filtrar solo mensajes que tengan marcas correctas en /propiedades
+                        # 1. Filtro especial para búsquedas por DNI / Propiedades
                         if op_data["origen"] == "PARTIDADNI":
-                            if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
+                            if any(k in texto_a_buscar for k in ["MEXES", "PARTIDA", "PROPIEDADES", "DNI"]):
                                 op_encontrada = clave
                                 placa_detectada = op_data["placa"]
                                 break
                             else:
                                 continue
-                        elif "MEXES" in texto_a_buscar:
+                        
+                        # 2. Filtro expandido para consultas vehiculares (PLACA, TIVE, BOLETA, DENUNCIAS)
+                        # Agregamos palabras clave de éxito y también de error para que no se quede callado
+                        palabras_validas_franchesco = [
+                            "MEXES", "HUGO", "BOLETA", "TIVE", "INFORMATIVA", 
+                            "PROCESADO", "REGISTRO", "NO SE ENCONTRÓ", "NO SE ENCONTRO", 
+                            "ERROR", "NO EXISTE", "SIN RESULTADOS"
+                        ]
+                        
+                        if any(palabra in texto_a_buscar for palabra in palabras_validas_franchesco):
                             if op_data["origen"] in ["PLACA", "TIVE", "BOLETA", "DENUNCIAS"]:
                                 op_encontrada = clave
                                 placa_detectada = op_data["placa"]
@@ -699,11 +766,10 @@ async def main():
                             continue
                         
                         # 2. Comprobamos si el mensaje (o la descripción de la foto) tiene tus marcas
-                        tiene_formato_correcto = "CONSULTA DE PLACA" in texto_a_buscar
-                        es_tu_consulta = "MEXES" in texto_a_buscar or "HUGO" in texto_a_buscar
+                        tiene_formato_correcto = "CONSULTA DE PLACA" in texto_a_buscar or "MEXES" in texto_a_buscar or "HUGO" in texto_a_buscar or "BOLETA" in texto_a_buscar
                         
-                        # 3. Si es válido y corresponde a una ráfaga TIVE, lo capturamos
-                        if op_data["origen"] == "TIVE" and tiene_formato_correcto and es_tu_consulta:
+                        # 3. Capturamos si corresponde a TIVE, RQ o al comando BOLETA
+                        if op_data["origen"] in ["TIVE", "RQ", "BOLETA"] and tiene_formato_correcto:
                             op_encontrada = clave
                             placa_detectada = op_data["placa"]
                             break
