@@ -56,7 +56,7 @@ TXT_KIMICO     = "KIMICO"  # Nueva palabra clave para el grupo Kimico
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
 USER_NORTH_BOT = "northdatabasicbot"
-USER_LIAM_BOT  = "Yinwodataa_bot"  
+USER_LIAM_BOT  = "Yinwodataa_botx"  
 
 from telethon.sessions import StringSession
 
