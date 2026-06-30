@@ -106,14 +106,13 @@ async def mapear_motores_por_id():
     global entidad_franchesco, entidad_df_vip, entidad_north_bot, entidad_liam_bot, entidad_kimico
     global id_franchesco, id_df_vip, id_north_bot, id_liam_bot, id_kimico
     
-    # client.start() sin parámetros puede congelarse en Render si no hay terminal activa.
-    # Conectamos de forma directa y segura.
     if not client.is_connected():
         await client.connect()
     
     print("📋 Sincronizando e indexando IDs reales de Telegram...")
     
-    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]", "DF VIP [ GRUPO 10 ]"]
+    # 🛑 ACTUALIZADO: Limpiamos los grupos obsoletos de la lista negra
+    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]"]
     
     async for dialog in client.iter_dialogs(limit=150):
         if dialog.name:
@@ -124,11 +123,14 @@ async def mapear_motores_por_id():
             if TXT_FRANCHESCO in nombre_chat and not entidad_franchesco:
                 entidad_franchesco = dialog.input_entity
                 id_franchesco = dialog.id
-                print(f"🎯 ID Franchesco Fijado: {id_franchesco} ({dialog.name})") #  Corregido a una sola 'e'
-            elif TXT_DF_VIP in nombre_chat and not entidad_df_vip:
+                print(f"🎯 ID Franchesco Fijado: {id_franchesco} ({dialog.name})") 
+            
+            # 🚀 CORRECCIÓN: Captura el nuevo grupo DF VIP 03 asegurando que coincida el texto
+            elif TXT_DF_VIP in nombre_chat and "03" in nombre_chat and not entidad_df_vip:
                 entidad_df_vip = dialog.input_entity
                 id_df_vip = dialog.id
-                print(f"🎯 ID DF VIP Fijado: {id_df_vip} ({dialog.name})")
+                print(f"🎯 ID DF VIP 03 Fijado: {id_df_vip} ({dialog.name})")
+                
             elif TXT_KIMICO in nombre_chat and dialog.is_group and not entidad_kimico:
                 entidad_kimico = dialog.input_entity
                 id_kimico = dialog.id
