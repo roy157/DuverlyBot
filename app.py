@@ -52,7 +52,7 @@ except KeyError as e:
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
 TXT_DF_VIP     = "DF VIP"
-TXT_KIMICO     = "KIMICO"  # Nueva palabra clave para el grupo Kimico
+TXT_KIMICO     = "KIMICOx"  # Nueva palabra clave para el grupo Kimico
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
 USER_NORTH_BOT = "northdatabasicbot"
