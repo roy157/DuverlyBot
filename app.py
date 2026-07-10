@@ -686,14 +686,22 @@ async def main():
                 if hasattr(attr, 'file_name') and attr.file_name:
                     texto_a_buscar += " " + attr.file_name.upper()
 
+        # 🔥 FILTRO ESTRICTO ANTICRUCES PARA APP3
+        texto_limpio_proveedor = texto_a_buscar.replace("-", "").replace("_", "").replace(" ", "").replace("|", "").replace("\n", "")
+        
         for clave, op_data in list(control_operaciones.items()):
-            if op_data["placa"] in texto_a_buscar.replace("-", "").replace("_", "").replace(" ", "").replace("|", ""):
+            # Regla de oro: La placa exacta de nuestra operación DEBE estar en el mensaje del proveedor
+            if op_data["placa"] in texto_limpio_proveedor:
                 if origen_texto in op_data["motores"]:
+                    # Evitamos capturar si el mensaje del proveedor hace referencia explícita a la ráfaga /info o pasos de app.py
+                    if "INFO" in texto_a_buscar or "[PASO" in texto_a_buscar:
+                        continue
                     op_encontrada = clave
                     placa_detectada = op_data["placa"]
                     break
 
         if not op_encontrada:
+            # Si no encontramos coincidencia directa por placa, solo evaluamos alternativas que NO sean vehiculares comunes (como búsquedas por Nombre)
             for clave, op_data in list(control_operaciones.items()):
                 if origen_texto in op_data["motores"] and not op_data["motores"][origen_texto]:
                     
@@ -703,6 +711,7 @@ async def main():
                         
                         palabras_validas_nombre = ["DNI", "NOMBRES", "APELLIDOS", "RESULTADOS", "NO SE ENCONTRÓ", "NO SE ENCONTRO", "ERROR", "NO EXISTE", "ANTI-SPAM"]
                         if any(palabra in texto_a_buscar.upper() for palabra in palabras_validas_nombre):
+                            if "INFO" in texto_a_buscar or "[PASO" in texto_a_buscar: continue  # Filtro anti-cruces
                             op_encontrada = clave
                             placa_detectada = op_data["placa"]
                             break
@@ -787,6 +796,11 @@ async def main():
                 if hasattr(attr, 'file_name') and attr.file_name:
                     nombre_original = attr.file_name
                     break
+            
+            # 🔥 FILTRO DE SEGURIDAD INTER-BOT: Si el archivo contiene indicios de la ráfaga de app.py, lo ignora
+            if "PASO" in nombre_original.upper() or "INFO" in nombre_original.upper():
+                print(f"🤫 [BOT PRINCIPAL] PDF '{nombre_original}' omitido de forma segura. Pertenece a la ráfaga de app.py")
+                return
             
             if origen_texto == "NORTH DATA": 
                 north_respondido_exito[op_encontrada] = True
