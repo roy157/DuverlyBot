@@ -52,6 +52,7 @@ except KeyError as e:
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
 TXT_DF_VIP     = "DF VIP"
+TXT_KIMICO     = "KIMICOx"  # Nueva palabra clave para el grupo Kimico
 TXT_KIMICO     = "KIMICO"  # Nueva palabra clave para el grupo Kimico
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
@@ -105,32 +106,32 @@ imagenes_procesadas_recientes = []
 async def mapear_motores_por_id():
     global entidad_franchesco, entidad_df_vip, entidad_north_bot, entidad_liam_bot, entidad_kimico
     global id_franchesco, id_df_vip, id_north_bot, id_liam_bot, id_kimico
-    
+
     if not client.is_connected():
         await client.connect()
-    
+
     print("📋 Sincronizando e indexando IDs reales de Telegram...")
-    
+
     # 🛑 ACTUALIZADO: Limpiamos los grupos obsoletos de la lista negra
     GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]"]
-    
+
     async for dialog in client.iter_dialogs(limit=150):
         if dialog.name:
             nombre_chat = dialog.name.upper().strip()
             if any(obviar.upper() in nombre_chat for obviar in GRUPOS_A_OBVIAR):
                 continue
-            
+
             if TXT_FRANCHESCO in nombre_chat and not entidad_franchesco:
                 entidad_franchesco = dialog.input_entity
                 id_franchesco = dialog.id
                 print(f"🎯 ID Franchesco Fijado: {id_franchesco} ({dialog.name})") 
-            
+
             # 🚀 CORRECCIÓN: Captura el nuevo grupo DF VIP 03 asegurando que coincida el texto
             elif TXT_DF_VIP in nombre_chat and "03" in nombre_chat and not entidad_df_vip:
                 entidad_df_vip = dialog.input_entity
                 id_df_vip = dialog.id
                 print(f"🎯 ID DF VIP 03 Fijado: {id_df_vip} ({dialog.name})")
-                
+
             elif TXT_KIMICO in nombre_chat and dialog.is_group and not entidad_kimico:
                 entidad_kimico = dialog.input_entity
                 id_kimico = dialog.id
@@ -155,17 +156,17 @@ async def mapear_motores_por_id():
 async def flujo_especial_north(placa, clave_operacion):
     global entidad_north_bot, north_respondido_exito, control_operaciones
     if not entidad_north_bot: return
-    
+
     north_respondido_exito[clave_operacion] = False
-    
+
     print(f"⏱️ [NORTH DATA] Enviando primer intento /tiv {placa} para {clave_operacion}")
     try:
         await client.send_message(entidad_north_bot, f"/tiv {placa}")
     except Exception as e: 
         print(f"❌ Error al enviar a North: {e}")
-    
+
     await asyncio.sleep(30)
-    
+
     if north_respondido_exito.get(clave_operacion) == True:
         print(f"✅ [NORTH DATA] PDF recibido a tiempo para {clave_operacion}. Reintento cancelado.")
         return
@@ -185,10 +186,10 @@ def liberar_operacion_de_memoria(clave_operacion):
             try:
                 bot.delete_message(msg_carga.chat.id, msg_carga.message_id)
             except: pass
-        
+
         del control_operaciones[clave_operacion]
         print(f"🧹 [MEMORIA] Operación [{clave_operacion}] liberada de forma aislada.")
-    
+
     if clave_operacion in north_respondido_exito: 
         del north_respondido_exito[clave_operacion]
 
@@ -203,11 +204,11 @@ def verificar_y_marcar_respuesta(clave_operacion, motor):
     global control_operaciones
     if clave_operacion not in control_operaciones:
         return
-    
+
     if motor in control_operaciones[clave_operacion]["motores"]:
         control_operaciones[clave_operacion]["motores"][motor] = True
         print(f"📊 [PROGRESO {clave_operacion}]: {motor} -> ✅ REGISTRADO.")
-    
+
     if all(control_operaciones[clave_operacion]["motores"].values()):
         liberar_operacion_de_memoria(clave_operacion)
 
@@ -224,10 +225,10 @@ def recibir_orden_docs(message):
     if len(texto) < 2:
         bot.reply_to(message, "❌ Envía la placa o partida. Ejemplo: /partida CAJ270")
         return
-        
+
     placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_PARTIDA"
-    
+
     if entidad_df_vip:
         msg_carga = bot.reply_to(message, f"🔍 Consultando PDF para {placa} en DF VIP...")
         control_operaciones[clave_operacion] = {
@@ -248,10 +249,10 @@ def recibir_orden_imagenes(message):
     if len(texto) < 2:
         bot.reply_to(message, "❌ Envía la placa. Ejemplo: /placa CAJ270")
         return
-        
+
     placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_PLACA"
-    
+
     if entidad_franchesco:
         msg_carga = bot.reply_to(message, f"📸 Consultando en FRANCHESCO para {placa}...")
         control_operaciones[clave_operacion] = {
@@ -268,13 +269,13 @@ def recibir_orden_imagenes(message):
 def recibir_orden_tive_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
     global entidad_df_vip, entidad_franchesco, entidad_north_bot, entidad_liam_bot, entidad_kimico
-    
+
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
     if len(texto) < 2:
         bot.reply_to(message, "❌ Envía la placa. Ejemplo: /tive CAJ270")
         return
-        
+
     placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_TIVE"
     msg_carga = bot.reply_to(message, f"⚡ ¡Ráfaga /tive activada para {placa}!\nDisparando consultas a todos los proveedores...")
@@ -311,13 +312,13 @@ def recibir_orden_tive_global(message):
 def recibir_orden_boleta_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
     global entidad_df_vip, entidad_franchesco, entidad_north_bot, entidad_liam_bot
-    
+
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
     if len(texto) < 2:
         bot.reply_to(message, "❌ Envía la placa. Ejemplo: /boleta CAJ270")
         return
-        
+
     placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_BOLETA"
     msg_carga = None
@@ -358,13 +359,13 @@ def recibir_orden_boleta_global(message):
 def recibir_orden_partidadni_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
     global entidad_df_vip, entidad_franchesco
-    
+
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
     if len(texto) < 2:
         bot.reply_to(message, "❌ Envía el DNI. Ejemplo: /propiedades 12345678")
         return
-        
+
     dni = texto[1].upper().strip()
     clave_operacion = f"{dni}_PARTIDADNI" 
     msg_carga = None
@@ -395,18 +396,18 @@ def recibir_orden_partidadni_global(message):
 def recibir_orden_nombre_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
     global entidad_df_vip, entidad_franchesco
-    
+
     chat_id_hugo = message.chat.id  
     texto_completo = message.text.split(maxsplit=1)
     if len(texto_completo) < 2:
         bot.reply_to(message, "❌ Envía el nombre completo. Ejemplo: /nombre CRISTIAN CONDORI MONTOYA")
         return
-        
+
     nombre_original = texto_completo[1].upper().strip()
     palabras = nombre_original.split()
     nombre_formateado = " | ".join(palabras)
     clave_operacion = f"{''.join(palabras)}_NOMBRE" 
-    
+
     msg_carga = None
     try:
         msg_carga = bot.reply_to(message, f"👤 ¡Búsqueda por Nombre activada para: {nombre_original}!\nFormato enviado: `/nm {nombre_formateado}`\nDisparando consultas...")
@@ -435,16 +436,16 @@ def recibir_orden_nombre_global(message):
 def recibir_orden_denuncias_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
     global entidad_df_vip, entidad_franchesco
-    
+
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
     if len(texto) < 2:
         bot.reply_to(message, "❌ Envía la placa. Ejemplo: /denuncias CAJ270")
         return
-        
+
     placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_DENUNCIAS"
-    
+
     msg_carga = None
     try:
         msg_carga = bot.reply_to(message, f"🚨 ¡Ráfaga /denuncias activada para {placa}!\nDisparando consultas de antecedentes policiales y denuncias...")
@@ -473,16 +474,16 @@ def recibir_orden_denuncias_global(message):
 def recibir_orden_rq_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
     global entidad_north_bot, entidad_kimico
-    
+
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
     if len(texto) < 2:
         bot.reply_to(message, "❌ Envía la placa. Ejemplo: /rq CAJ270")
         return
-        
+
     placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_RQ"
-    
+
     msg_carga = None
     try:
         msg_carga = bot.reply_to(message, f"🔍 ¡Consulta /rq activada para {placa}!\nDisparando solicitudes a North Data y Kimico...")
@@ -513,13 +514,13 @@ def recibir_orden_rq_global(message):
 
 def generar_menu_principal(first_name):
     markup = InlineKeyboardMarkup(row_width=2)
-    
+
     msg_ayuda = urllib.parse.quote("NECESITO AYUDA POR FAVOR LLAMAME")
     msg_avisar = urllib.parse.quote("hay algo que no esta funcionando bien")
     msg_urgencia = urllib.parse.quote("por favor llamame urgente tengo unos problemas")
-    
+
     numero_whatsapp = "51952513161"
-    
+
     btn_ayuda = InlineKeyboardButton("🆘 AYUDA", url=f"https://wa.me/{numero_whatsapp}?text={msg_ayuda}")
     btn_avisar = InlineKeyboardButton("📢 AVISAR", url=f"https://wa.me/{numero_whatsapp}?text={msg_avisar}")
     btn_urgencia = InlineKeyboardButton("🚨 URGENCIA", url=f"https://wa.me/{numero_whatsapp}?text={msg_urgencia}")
@@ -548,7 +549,7 @@ def responder_clicks_botones(call):
         markup_vehiculos = InlineKeyboardMarkup()
         btn_regresar = InlineKeyboardButton("⬅️ Volver al Menú", callback_data="volver_principal")
         markup_vehiculos.add(btn_regresar)
-        
+
         texto_vehiculos = (
             "📋 <b>[ CATEGORÍA ⇒ VEHÍCULOS ]</b>\n\n"
             "1️⃣ <b>CONSULTA PARTIDA DEL VEHICULO (DF VIP)</b>\n"
@@ -577,7 +578,7 @@ def responder_clicks_botones(call):
             "• Ejemplo: /rq CAJ270"
         )
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=texto_vehiculos, parse_mode="HTML", reply_markup=markup_vehiculos)
-    
+
     elif call.data == "volver_principal":
         bot.answer_callback_query(call.id)
         texto_menu, markup_menu = generar_menu_principal(call.from_user.first_name)
@@ -592,14 +593,14 @@ def responder_clicks_botones(call):
     elif call.data.startswith("prov_"):
         partes = call.data.split("_")
         if len(partes) < 4: return
-        
+
         prov_chat_id = int(partes[1])
         prov_msg_id = int(partes[2])
         boton_data_hex = partes[3]
         boton_data_bytes = bytes.fromhex(boton_data_hex)
-        
+
         bot.answer_callback_query(call.id, text="⏳ Solicitando documento al proveedor...")
-        
+
         if loop_principal:
             async def presionar_boton_remoto():
                 try:
@@ -614,7 +615,7 @@ def responder_clicks_botones(call):
                     print("❌ No se encontró el botón equivalente en el mensaje del proveedor.")
                 except Exception as e:
                     print(f"❌ Error al replicar el click en el proveedor: {e}")
-                    
+
             asyncio.run_coroutine_threadsafe(presionar_boton_remoto(), loop_principal)
 
 import time
@@ -626,7 +627,7 @@ def arrancar_bot_padre():
         bot.remove_webhook()
     except Exception as e:
         print(f"⚠️ Aviso al limpiar Webhook: {e}")
-        
+
     # 2. Bucle infinito controlado contra el Error 409
     while True:
         try:
@@ -653,20 +654,20 @@ async def main():
     global loop_principal, control_operaciones, north_respondido_exito
     global id_franchesco, id_df_vip, id_north_bot, id_liam_bot
     loop_principal = asyncio.get_running_loop()
-    
+
     await mapear_motores_por_id()
-    
+
     @client.on(events.NewMessage())
     async def escuchador_global_mensajes(event):
         global chat_id_hugo, control_operaciones, north_respondido_exito
         global id_franchesco, id_df_vip, id_north_bot, id_liam_bot, id_kimico
-        
+
         chat_actual_id = event.chat_id
         if not chat_id_hugo or not control_operaciones:
             return
 
         origen_texto = "DESCONOCIDO"
-        
+
         if id_franchesco and chat_actual_id == id_franchesco: origen_texto = "FRANCHESCO"
         elif id_df_vip and chat_actual_id == id_df_vip: origen_texto = "DF VIP"
         elif id_north_bot and chat_actual_id == id_north_bot: origen_texto = "NORTH DATA"
@@ -677,7 +678,7 @@ async def main():
 
         op_encontrada = None
         placa_detectada = None
-        
+
         texto_a_buscar = ""
         if event.message.text:
             texto_a_buscar = event.message.text.upper()
@@ -686,32 +687,23 @@ async def main():
                 if hasattr(attr, 'file_name') and attr.file_name:
                     texto_a_buscar += " " + attr.file_name.upper()
 
-        # 🔥 FILTRO ESTRICTO ANTICRUCES PARA APP3
-        texto_limpio_proveedor = texto_a_buscar.replace("-", "").replace("_", "").replace(" ", "").replace("|", "").replace("\n", "")
-        
         for clave, op_data in list(control_operaciones.items()):
-            # Regla de oro: La placa exacta de nuestra operación DEBE estar en el mensaje del proveedor
-            if op_data["placa"] in texto_limpio_proveedor:
+            if op_data["placa"] in texto_a_buscar.replace("-", "").replace("_", "").replace(" ", "").replace("|", ""):
                 if origen_texto in op_data["motores"]:
-                    # Evitamos capturar si el mensaje del proveedor hace referencia explícita a la ráfaga /info o pasos de app.py
-                    if "INFO" in texto_a_buscar or "[PASO" in texto_a_buscar:
-                        continue
                     op_encontrada = clave
                     placa_detectada = op_data["placa"]
                     break
 
         if not op_encontrada:
-            # Si no encontramos coincidencia directa por placa, solo evaluamos alternativas que NO sean vehiculares comunes (como búsquedas por Nombre)
             for clave, op_data in list(control_operaciones.items()):
                 if origen_texto in op_data["motores"] and not op_data["motores"][origen_texto]:
-                    
+
                     if op_data["origen"] == "NOMBRE":
                         if texto_a_buscar.strip().startswith("/"):
                             continue
-                        
+
                         palabras_validas_nombre = ["DNI", "NOMBRES", "APELLIDOS", "RESULTADOS", "NO SE ENCONTRÓ", "NO SE ENCONTRO", "ERROR", "NO EXISTE", "ANTI-SPAM"]
                         if any(palabra in texto_a_buscar.upper() for palabra in palabras_validas_nombre):
-                            if "INFO" in texto_a_buscar or "[PASO" in texto_a_buscar: continue  # Filtro anti-cruces
                             op_encontrada = clave
                             placa_detectada = op_data["placa"]
                             break
@@ -740,7 +732,7 @@ async def main():
                                 break
                             else:
                                 continue
-                            
+
                     elif origen_texto == "FRANCHESCO":
                         # 1. Filtro especial para búsquedas por DNI / Propiedades
                         if op_data["origen"] == "PARTIDADNI":
@@ -750,7 +742,7 @@ async def main():
                                 break
                             else:
                                 continue
-                        
+
                         # 2. Filtro expandido para consultas vehiculares (PLACA, TIVE, BOLETA, DENUNCIAS)
                         # Agregamos palabras clave de éxito y también de error para que no se quede callado
                         palabras_validas_franchesco = [
@@ -758,7 +750,7 @@ async def main():
                             "PROCESADO", "REGISTRO", "NO SE ENCONTRÓ", "NO SE ENCONTRO", 
                             "ERROR", "NO EXISTE", "SIN RESULTADOS"
                         ]
-                        
+
                         if any(palabra in texto_a_buscar for palabra in palabras_validas_franchesco):
                             if op_data["origen"] in ["PLACA", "TIVE", "BOLETA", "DENUNCIAS"]:
                                 op_encontrada = clave
@@ -775,10 +767,10 @@ async def main():
                         # 1. Si el mensaje es un comando directo de otro usuario, lo ignoramos
                         if texto_a_buscar.strip().startswith("/"):
                             continue
-                        
+
                         # 2. Comprobamos si el mensaje (o la descripción de la foto) tiene tus marcas
                         tiene_formato_correcto = "CONSULTA DE PLACA" in texto_a_buscar or "MEXES" in texto_a_buscar or "HUGO" in texto_a_buscar or "BOLETA" in texto_a_buscar
-                        
+
                         # 3. Capturamos si corresponde a TIVE, RQ o al comando BOLETA
                         if op_data["origen"] in ["TIVE", "RQ", "BOLETA"] and tiene_formato_correcto:
                             op_encontrada = clave
@@ -796,35 +788,30 @@ async def main():
                 if hasattr(attr, 'file_name') and attr.file_name:
                     nombre_original = attr.file_name
                     break
-            
-            # 🔥 FILTRO DE SEGURIDAD INTER-BOT: Si el archivo contiene indicios de la ráfaga de app.py, lo ignora
-            if "PASO" in nombre_original.upper() or "INFO" in nombre_original.upper():
-                print(f"🤫 [BOT PRINCIPAL] PDF '{nombre_original}' omitido de forma segura. Pertenece a la ráfaga de app.py")
-                return
-            
+
             if origen_texto == "NORTH DATA": 
                 north_respondido_exito[op_encontrada] = True
-                
+
             ruta = await event.message.download_media(file=nombre_original)
-            
+
             # Detectamos si es DNI o Placa para armar un mejor diseño de mensaje
             tipo_identificador = "👤 DNI" if control_operaciones[op_encontrada]["origen"] == "PARTIDADNI" else "🏁 Placa/Partida"
             caption_personalizado = f"📄 <b>Resultado ({origen_texto}):</b>\n{tipo_identificador}: <code>{placa_detectada}</code>"
-            
+
             with open(ruta, 'rb') as doc:
                 bot.send_document(chat_id_hugo, doc, caption=caption_personalizado, parse_mode="HTML")
 
             if os.path.exists(ruta):
                 try: os.remove(ruta)
                 except: pass
-                
+
             verificar_y_marcar_respuesta(op_encontrada, origen_texto)
             return
 
         elif event.message.media and event.message.photo and origen_texto in ["FRANCHESCO", "KIMICO"]:
             comando_origen = control_operaciones[op_encontrada]["origen"]
             caption_proveedor = event.message.message if event.message.message else ""
-            
+
             # 1. Filtro para evitar banners publicitarios intermedios de FRANCHESCO
             if origen_texto == "FRANCHESCO" and comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
                 print(f"🤫 Imagen publicitaria/secundaria omitida en ráfaga /{comando_origen.lower()} para {placa_detectada}.")
@@ -849,7 +836,7 @@ async def main():
 
             print(f"📸 ¡Reporte final detectado para {placa_detectada}! Eliminando carga y reenviando...")
             ruta_img = await event.message.download_media(file=f"{placa_detectada}.jpg")
-            
+
             try:
                 # 1. Si el reporte viene de KIMICO, vaciamos el texto para enviar solo la imagen limpia
                 if origen_texto == "KIMICO":
@@ -859,7 +846,7 @@ async def main():
                     if "ESTADO DE CUENTA" in caption_proveedor.upper():
                         partes = re.split(r'(?i)\[⚡\]\s*ESTADO DE CUENTA|ESTADO DE CUENTA', caption_proveedor)
                         caption_proveedor = partes[0].strip()
-                    
+
                     caption_final = f"📸 Reporte de [FRANCHESCO]:\n\n{caption_proveedor}"
 
                 # 2. Solo borramos el mensaje de carga si la foto es de FRANCHESCO
@@ -876,12 +863,12 @@ async def main():
                 with open(ruta_img, 'rb') as foto_enviar:
                     bot.send_photo(chat_id_hugo, foto_enviar, caption=caption_final)
                 print(f"✅ [ÉXITO] Reporte final entregado en espejo para {placa_detectada} desde {origen_texto}")
-                
+
                 imagenes_procesadas_recientes.append(placa_detectada)
-                
+
             except Exception as e:
                 print(f"❌ Error en el flujo de réplica: {e}")
-            
+
             verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
             if os.path.exists(ruta_img):
                 try: os.remove(ruta_img)
@@ -894,7 +881,7 @@ async def main():
                 return
 
             texto_grupo = event.message.text.upper()
-            
+
             if texto_grupo.startswith(('/TIVE', '/TIV', '/PLA', '/PARTI', '/BOI', '/BOLI', '/BOLETA', '/DENPLA', '/DENUNV', '/PROP')) and len(texto_grupo) < 15 and not "NO SE" in texto_grupo: 
                 return
 
@@ -919,11 +906,11 @@ async def main():
             if any(carga in texto_grupo for carga in palabras_carga): return
 
             comando_origen = control_operaciones[op_encontrada]["origen"]
-            
+
             if origen_texto == "FRANCHESCO":
                 if "NO SE ENCONTRÓ" in texto_grupo or "NO SE ENCONTRO" in texto_grupo or "ERROR" in texto_grupo:
                     print(f"❌ [FRANCHESCO] Reportó error en texto plano para {placa_detectada}.")
-                    
+
                     if comando_origen in ["PLACA", "DENUNCIAS"]:
                         msg_carga = control_operaciones[op_encontrada].get("msg_carga")
                         if msg_carga:
@@ -936,21 +923,21 @@ async def main():
 
             if origen_texto == "DF VIP":
                 es_error_df = "NO SE ENCONTRÓ" in texto_grupo or "NO SE ENCONTRO" in texto_grupo or "ERROR" in texto_grupo or "NO EXISTE" in texto_grupo
-                
+
                 if es_error_df:
                     print(f"❌ [DF VIP] Reportó falta de datos para {placa_detectada}.")
-                    
+
                     # SI FALLÓ EL TIVE, CORREMOS LA LOGICA DE RETARDO Y ADVERTENCIA
                     if comando_origen == "TIVE":
                         print(f"🔄 [DF VIP CONTROLADO] TIVE no encontrada. Avisando y programando /partidav en 15s...")
-                        
+
                         # 1. Enviar el mensaje inmediato al usuario avisando que no tenía TIVE con parseo HTML activo
                         bot.send_message(
                             chat_id_hugo, 
                             f"⚠️ <b>Aviso [DF VIP]:</b>\n🏁 Placa: <code>{placa_detectada}</code>\n\n❌ No se encontró la TIVE. Esperando 15 segundos para consultar Partida...",
                             parse_mode="HTML"
                         )
-                        
+
                         # 2. Definimos una pequeña subtarea asíncrona para esperar y disparar el comando
                         async def ejecutar_respaldo_partida(id_grupo, placa, clave_op):
                             await asyncio.sleep(15)
@@ -959,22 +946,22 @@ async def main():
                                 print(f"🚀 [DF VIP] Pasaron los 15s. Soltando comando: /partidav {placa}")
                                 control_operaciones[clave_op]["origen"] = "PARTIDAV"
                                 await client.send_message(id_grupo, f"/partidav {placa}")
-                        
+
                         # Lanzamos la espera en el loop principal para no bloquear el flujo del bot
                         asyncio.run_coroutine_threadsafe(ejecutar_respaldo_partida(id_df_vip, placa_detectada, op_encontrada), loop_principal)
                         return
-                    
+
                     # Si ya falló estando en PARTIDAV, DENUNCIAS o PARTIDADNI, cerramos la operación normalmente
                     if comando_origen in ["PARTIDAV", "DENUNCIAS", "PARTIDADNI"]:
                         msg_carga = control_operaciones[op_encontrada].get("msg_carga")
                         if msg_carga:
                             try: bot.delete_message(msg_carga.chat.id, msg_carga.message_id)
                             except: pass
-                    
+
                     bot.send_message(chat_id_hugo, f"⚠️ Resultado [{origen_texto}]:\n🏁 Placa: `{placa_detectada}`\n\n❌ No se encontró información o registros en este proveedor.")
                     verificar_y_marcar_respuesta(op_encontrada, origen_texto)
                     return
-                    
+
                 elif comando_origen == "PARTIDAV":
                     # Si tiene marcas de que es el reporte final en texto plano, lo dejamos pasar
                     if "MEXES" in texto_grupo or "PARTIDA" in texto_grupo:
@@ -994,12 +981,12 @@ async def main():
                     "NO EXISTE" in texto_grupo or
                     "NO CUENTA CON TIVE" in texto_grupo
                 )
-                
+
                 if es_error_north:
                     print(f"❌ [NORTH DATA] Reportó falta de datos para {placa_detectada}. Reenviando alerta...")
-                    
+
                     texto_original = event.message.text
-                    
+
                     # Si el mensaje contiene explícitamente que no cuenta con TIVE, extraemos esa línea exacta
                     if "NO CUENTA CON TIVE" in texto_original.upper():
                         lineas = texto_original.split('\n')
@@ -1019,16 +1006,16 @@ async def main():
                             if "CONSULTADO POR" in linea.upper() or "CREDITOS" in linea.upper(): break
                             lineas_limpias.append(linea)
                         reporte_recortado = "\n".join(lineas_limpias).strip()
-                    
+
                     if not reporte_recortado: 
                         reporte_recortado = texto_original.strip()
-                    
+
                     bot.send_message(
                         chat_id_hugo, 
                         f"📢 <b>Respuesta de [{origen_texto}]:</b>\n🏁 Placa/Partida: <code>{placa_detectada}</code>\n\n{reporte_recortado}",
                         parse_mode="HTML"
                     )
-                    
+
                     if comando_origen == "TIVE" and not north_respondido_exito.get(op_encontrada):
                         print(f"⏱️ [NORTH DATA] Primer intento fallido en ráfaga /tive. Manteniendo operación viva para el reintento...")
                     else:
@@ -1043,7 +1030,7 @@ async def main():
             lineas_limpias = []
             for linea in lineas:
                 if "CONSULTADO POR" in linea.upper() or "CREDITOS" in linea.upper(): break
-                
+
                 linea_procesada = (linea.replace("`", "")
                                         .replace("**", "")
                                         .replace("__", "")
@@ -1051,7 +1038,7 @@ async def main():
                                         .replace("[", "")
                                         .replace("]", "")
                                         .replace("*", ""))
-                
+
                 linea_procesada = re.sub(r'(=&gt;|&gt;|⇒|=>|->|➾)', ':', linea_procesada)
 
                 for car in ['\\', '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']:
@@ -1059,7 +1046,7 @@ async def main():
 
                 linea_procesada = re.sub(r'(?<!\d)(\d+)(?!\d)', r'<code>\1</code>', linea_procesada)
                 lineas_limpias.append(linea_procesada)
-                
+
             reporte_recortado = "\n".join(lineas_limpias).strip()
             if not reporte_recortado: 
                 reporte_recortado = texto_original.strip()
@@ -1074,7 +1061,7 @@ async def main():
                             if hasattr(button, 'data'):
                                 boton_data_hex = button.data.hex()
                                 callback_compuesto = f"prov_{chat_actual_id}_{event.message.id}_{boton_data_hex}"
-                                
+
                                 if len(callback_compuesto) <= 64:
                                     fila_botones.append(InlineKeyboardButton(text=button.text, callback_data=callback_compuesto))
                         if fila_botones:
@@ -1087,7 +1074,7 @@ async def main():
                     parse_mode="HTML",
                     reply_markup=markup_botones
                 )
-                
+
                 if markup_botones:
                     print(f"📥 [BOTONES DETECTADOS] Se clonaron los botones interactivos del proveedor {origen_texto} para {placa_detectada}.")
                     return 
@@ -1095,7 +1082,7 @@ async def main():
             except Exception as e:
                 print(f"⚠️ Error en HTML o mapeo de botones, aplicando respaldo seguro: {e}")
                 bot.send_message(chat_id_hugo, f"📢 Respuesta de [{origen_texto}]:\n🏁 Placa/Partida: {placa_detectada}\n\n{texto_original}")
-        
+
             verificar_y_marcar_respuesta(op_encontrada, origen_texto)
 
     print("🚀 [SISTEMA ULTRA-ESTABLE ONLINE] Extracción prioritaria activa sin OCR.")
@@ -1103,14 +1090,14 @@ async def main():
 
 if __name__ == '__main__':
     print("Iniciando sistema multimotor seguro...")
-    
+
     # 1. Lanzamos el bot de PyTelegramBotAPI (Telebot) en su propio hilo independiente
     threading.Thread(target=arrancar_bot_padre, daemon=True).start()
-    
+
     # 2. Creamos y configuramos explícitamente el bucle asíncrono para el hilo principal (Evita el RuntimeError en Render)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    
+
     try:
         # 3. Corremos la función principal asíncrona de Telethon
         loop.run_until_complete(main())
