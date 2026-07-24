@@ -51,7 +51,7 @@ except KeyError as e:
 
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
-TXT_DF_VIP     = "DF VIPxx"
+TXT_DF_VIP     = "DF VIP"
 TXT_KIMICO     = "KIMICOx"  # Nueva palabra clave para el grupo Kimico
 TXT_KIMICO     = "KIMICO"  # Nueva palabra clave para el grupo Kimico
 
