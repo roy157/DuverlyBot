@@ -50,7 +50,7 @@ except KeyError as e:
     raise ValueError(f"❌ ERROR CRÍTICO DE SEGURIDAD: Falta configurar la variable de entorno obligatoria: {e} en Render.")
 
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
-TXT_FRANCHESCO = "FRANCHESCO"
+TXT_FRANCHESCO = "FRANCHESCOx"
 TXT_DF_VIP     = "DF VIP"
 TXT_KIMICO     = "KIMICO"  # Nueva palabra clave para el grupo Kimico
 
