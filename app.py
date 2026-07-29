@@ -282,12 +282,13 @@ def recibir_orden_tive_global(message):
         "placa": placa,
         "origen": "TIVE",
         "msg_carga": msg_carga,
+        "fotos_north": 0,  # Contador obligatorio para omitir el logo de North Data en ráfagas
         "motores": {
             "DF VIP": False,
             "FRANCHESCO": False,
             "NORTH DATA": False,
             "LIAM DATA": False,
-            "KIMICO": False  # Se añade KIMICO al control de respuestas
+            "KIMICO": False
         }
     }
 
@@ -805,26 +806,24 @@ async def main():
             comando_origen = control_operaciones[op_encontrada]["origen"]
             caption_proveedor = event.message.message if event.message.message else ""
 
-            # 1. Filtro numérico exclusivo para NORTH DATA: Se descarta la PRIMERA imagen (Logo/Carga)
+            # 🛑 1. FILTRO DEFINITIVO PARA NORTH DATA
             if origen_texto == "NORTH DATA":
-                # Aseguramos la existencia del contador
-                if "fotos_north" not in control_operaciones[op_encontrada]:
-                    control_operaciones[op_encontrada]["fotos_north"] = 0
-                
-                control_operaciones[op_encontrada]["fotos_north"] += 1
+                # Incrementamos o inicializamos el contador
+                control_operaciones[op_encontrada]["fotos_north"] = control_operaciones[op_encontrada].get("fotos_north", 0) + 1
                 num_foto = control_operaciones[op_encontrada]["fotos_north"]
 
+                # La 1.ª foto de North Data es la pantalla de la corona -> SE IGNORA
                 if num_foto == 1:
-                    print(f"⏳ [NORTH DATA] 1.ª imagen (pantalla de carga) descartada para {placa_detectada}. Esperando imagen de resultado...")
+                    print(f"⏳ [NORTH DATA] 1.ª imagen (logo de carga) ignorada para {placa_detectada}.")
                     return
 
-            # 2. Filtro para omitir imágenes secundarias/publicitarias de Franchesco en ráfagas
+            # 2. Omitir imágenes publicitarias de Franchesco en ráfagas
             if origen_texto == "FRANCHESCO" and comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
                 print(f"🤫 Imagen publicitaria de Franchesco omitida para {placa_detectada}.")
                 verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
                 return
 
-            # 3. Filtro secundario por texto si la imagen trae algún aviso de carga explícito
+            # 3. Descartar cualquier pantalla de espera adicional por palabras clave
             palabras_carga_imagen = [
                 "CONSULTANDO PLACA", "POR FAVOR ESPERA", "ESTAMOS PROCESANDO", 
                 "UN MOMENTO PORFAVOR", "UN MOMENTO POR FAVOR", "PROCESANDO TU SOLICITUD"
