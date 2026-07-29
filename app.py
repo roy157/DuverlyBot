@@ -811,21 +811,35 @@ async def main():
             comando_origen = control_operaciones[op_encontrada]["origen"]
             caption_proveedor = event.message.message if event.message.message else ""
 
-            # 🚀 SI ES KIMICO: Extraemos solo los valores de texto y NO descargamos la foto
+            # 🚀 FLUJO ESPECÍFICO Y EXCLUSIVO PARA KIMICO
             if origen_texto == "KIMICO":
                 texto_raw = caption_proveedor
-                
-                placa_m   = re.search(r"PLACA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                oficina_m = re.search(r"OFICINA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                partida_m = re.search(r"N(?:°|O|o)?\s*PARTIDA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                nombre_m  = re.search(r"NOMBRE\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                doc_m     = re.search(r"DOC\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
 
-                val_placa   = placa_m.group(1).strip() if placa_m else placa_detectada
-                val_oficina = oficina_m.group(1).strip() if oficina_m else "NO REGISTRA"
-                val_partida = partida_m.group(1).strip() if partida_m else "NO REGISTRA"
-                val_nombre  = nombre_m.group(1).strip() if nombre_m else "NO REGISTRA"
-                val_doc     = doc_m.group(1).strip() if doc_m else "NO REGISTRA"
+                # 1. Ignoramos pantallas de carga intermedias de Kimico
+                if not ("CONSULTA DE PLACA" in texto_raw.upper() or "PROPIETARIO" in texto_raw.upper()):
+                    print(f"⏳ [KIMICO] Mensaje de carga o preliminar omitido para {placa_detectada}. Esperando el reporte final...")
+                    return
+
+                # 2. Expresiones regulares flexibles para capturar incluso con caracteres invisibles o formatos raros
+                placa_m   = re.search(r"PLACA\s*[:\=]\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+                oficina_m = re.search(r"OFICINA\s*[:\=]\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+                partida_m = re.search(r"PARTIDA\s*[:\=]\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+                nombre_m  = re.search(r"NOMBRE\s*[:\=]\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+                doc_m     = re.search(r"DOC\s*[:\=]\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+
+                # Limpieza de cualquier etiqueta HTML o markdown dentro de la captura
+                def limpiar_val(val_raw):
+                    if not val_raw: return None
+                    val = re.sub(r'<[^>]+>', '', val_raw.group(1)).strip()
+                    for c in ['`', '*', '_', '~', '[', ']', '(', ')']:
+                        val = val.replace(c, '')
+                    return val if val else None
+
+                val_placa   = limpiar_val(placa_m) or placa_detectada
+                val_oficina = limpiar_val(oficina_m) or "NO REGISTRA"
+                val_partida = limpiar_val(partida_m) or "NO REGISTRA"
+                val_nombre  = limpiar_val(nombre_m) or "NO REGISTRA"
+                val_doc     = limpiar_val(doc_m) or "NO REGISTRA"
 
                 mensaje_kimico = (
                     f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
@@ -835,6 +849,7 @@ async def main():
                     f"<b>NOMBRE :</b> {val_nombre}\n"
                     f"<b>DOC :</b> {val_doc}"
                 )
+                
                 bot.send_message(chat_id_hugo, mensaje_kimico, parse_mode="HTML")
                 verificar_y_marcar_respuesta(op_encontrada, "KIMICO")
                 return
