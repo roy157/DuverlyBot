@@ -837,9 +837,34 @@ async def main():
             ruta_img = await event.message.download_media(file=f"{placa_detectada}.jpg")
 
             try:
-                # 1. Si el reporte viene de KIMICO, vaciamos el texto para enviar solo la imagen limpia
+                # 1. Si el reporte viene de KIMICO, parseamos y filtramos el texto relevante
                 if origen_texto == "KIMICO":
-                    caption_final = f"📸 Reporte de [KIMICO] 🏁 Placa: {placa_detectada}"
+                    texto_kimico = event.message.message if event.message.message else ""
+                    
+                    # Expresiones para extraer los campos deseados
+                    placa_match = re.search(r"PLACA\s*:\s*(.+)", texto_kimico)
+                    oficina_match = re.search(r"OFICINA\s*:\s*(.+)", texto_kimico)
+                    partida_match = re.search(r"N° PARTIDA\s*:\s*(.+)", texto_kimico)
+                    nombre_match = re.search(r"NOMBRE\s*:\s*(.+)", texto_kimico)
+                    doc_match = re.search(r"DOC\s*:\s*(.+)", texto_kimico)
+
+                    # Extraemos el valor o dejamos 'No especificado' si no lo encuentra
+                    val_placa = placa_match.group(1).strip() if placa_match else placa_detectada
+                    val_oficina = oficina_match.group(1).strip() if oficina_match else "-"
+                    val_partida = partida_match.group(1).strip() if partida_match else "-"
+                    val_nombre = nombre_match.group(1).strip() if nombre_match else "-"
+                    val_doc = doc_match.group(1).strip() if doc_match else "-"
+
+                    # Armamos la estructura final limpia
+                    caption_final = (
+                        f"📸 <b>Reporte de [KIMICO]</b>\n\n"
+                        f"<b>PLACA :</b> <code>{val_placa}</code>\n"
+                        f"<b>OFICINA :</b> {val_oficina}\n"
+                        f"<b>N° PARTIDA :</b> <code>{val_partida}</code>\n"
+                        f"<b>NOMBRE :</b> {val_nombre}\n"
+                        f"<b>DOC :</b> {val_doc}"
+                    )
+
                 else:
                     # Conservamos la lógica normal de limpieza de texto para FRANCHESCO
                     if "ESTADO DE CUENTA" in caption_proveedor.upper():
@@ -860,7 +885,7 @@ async def main():
 
                 # 3. Enviamos la foto al chat con el caption correspondiente (limpio para Kimico)
                 with open(ruta_img, 'rb') as foto_enviar:
-                    bot.send_photo(chat_id_hugo, foto_enviar, caption=caption_final)
+                    bot.send_photo(chat_id_hugo, foto_enviar, caption=caption_final, parse_mode="HTML")
                 print(f"✅ [ÉXITO] Reporte final entregado en espejo para {placa_detectada} desde {origen_texto}")
 
                 imagenes_procesadas_recientes.append(placa_detectada)
