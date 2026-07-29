@@ -811,110 +811,109 @@ async def main():
             comando_origen = control_operaciones[op_encontrada]["origen"]
             caption_proveedor = event.message.message if event.message.message else ""
 
-            # 1. Filtro para evitar banners publicitarios intermedios de FRANCHESCO
-            if origen_texto == "FRANCHESCO" and comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
+            # 🚀 SI ES KIMICO: Extraemos solo los valores de texto y NO descargamos la foto
+            if origen_texto == "KIMICO":
+                texto_raw = caption_proveedor
+                
+                placa_m   = re.search(r"PLACA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                oficina_m = re.search(r"OFICINA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                partida_m = re.search(r"N(?:°|O|o)?\s*PARTIDA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                nombre_m  = re.search(r"NOMBRE\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                doc_m     = re.search(r"DOC\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+
+                val_placa   = placa_m.group(1).strip() if placa_m else placa_detectada
+                val_oficina = oficina_m.group(1).strip() if oficina_m else "NO REGISTRA"
+                val_partida = partida_m.group(1).strip() if partida_m else "NO REGISTRA"
+                val_nombre  = nombre_m.group(1).strip() if nombre_m else "NO REGISTRA"
+                val_doc     = doc_m.group(1).strip() if doc_m else "NO REGISTRA"
+
+                mensaje_kimico = (
+                    f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
+                    f"<b>PLACA :</b> <code>{val_placa}</code>\n"
+                    f"<b>OFICINA :</b> {val_oficina}\n"
+                    f"<b>N° PARTIDA :</b> <code>{val_partida}</code>\n"
+                    f"<b>NOMBRE :</b> {val_nombre}\n"
+                    f"<b>DOC :</b> {val_doc}"
+                )
+                bot.send_message(chat_id_hugo, mensaje_kimico, parse_mode="HTML")
+                verificar_y_marcar_respuesta(op_encontrada, "KIMICO")
+                return
+
+            # --- A PARTIR DE AQUÍ CONTINÚA SOLO EL FLUJO DE FRANCHESCO ---
+            if comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
                 print(f"🤫 Imagen publicitaria/secundaria omitida en ráfaga /{comando_origen.lower()} para {placa_detectada}.")
                 verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
                 return
 
-            # 2. Evitar pantallas de carga intermedias
             palabras_carga_imagen = ["CONSULTANDO PLACA", "POR FAVOR ESPERA", "ESTAMOS PROCESANDO", "UN MOMENTO POR FAVOR"]
             if any(carga in caption_proveedor.upper() for carga in palabras_carga_imagen):
-                print(f"⏳ [PROCESANDO] Se detectó pantalla de carga visual de {origen_texto} para {placa_detectada}. Esperando el reporte real...")
+                print(f"⏳ [PROCESANDO] Se detectó pantalla de carga visual de FRANCHESCO para {placa_detectada}. Esperando el reporte real...")
                 return
 
             if placa_detectada in imagenes_procesadas_recientes:
                 print(f"🛑 [FILTRADO] Mensaje duplicado omitido para {placa_detectada}.")
                 return
 
-            print(f"📸 ¡Reporte final detectado para {placa_detectada}! Procesando...")
+            print(f"📸 ¡Reporte final detectado para {placa_detectada} en FRANCHESCO! Procesando...")
             ruta_img = await event.message.download_media(file=f"{placa_detectada}.jpg")
 
             try:
-                # Extraer datos de KIMICO sobre el caption crudo
-                if origen_texto == "KIMICO":
-                    texto_raw = caption_proveedor
-                    
-                    placa_m   = re.search(r"PLACA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                    oficina_m = re.search(r"OFICINA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                    partida_m = re.search(r"N(?:°|O|o)?\s*PARTIDA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                    nombre_m  = re.search(r"NOMBRE\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                    doc_m     = re.search(r"DOC\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                if "ESTADO DE CUENTA" in caption_proveedor.upper():
+                    partes = re.split(r'(?i)\[⚡\]\s*ESTADO DE CUENTA|ESTADO DE CUENTA', caption_proveedor)
+                    caption_proveedor = partes[0].strip()
 
-                    val_placa   = placa_m.group(1).strip() if placa_m else placa_detectada
-                    val_oficina = oficina_m.group(1).strip() if oficina_m else "NO REGISTRA"
-                    val_partida = partida_m.group(1).strip() if partida_m else "NO REGISTRA"
-                    val_nombre  = nombre_m.group(1).strip() if nombre_m else "NO REGISTRA"
-                    val_doc     = doc_m.group(1).strip() if doc_m else "NO REGISTRA"
+                caption_final = f"📸 Reporte de [FRANCHESCO]:\n\n{caption_proveedor}"
 
-                    caption_final = (
-                        f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
-                        f"<b>PLACA :</b> <code>{val_placa}</code>\n"
-                        f"<b>OFICINA :</b> {val_oficina}\n"
-                        f"<b>N° PARTIDA :</b> <code>{val_partida}</code>\n"
-                        f"<b>NOMBRE :</b> {val_nombre}\n"
-                        f"<b>DOC :</b> {val_doc}"
-                    )
-                else:
-                    if "ESTADO DE CUENTA" in caption_proveedor.upper():
-                        partes = re.split(r'(?i)\[⚡\]\s*ESTADO DE CUENTA|ESTADO DE CUENTA', caption_proveedor)
-                        caption_proveedor = partes[0].strip()
-
-                    caption_final = f"📸 Reporte de [FRANCHESCO]:\n\n{caption_proveedor}"
-
-                if origen_texto == "FRANCHESCO":
-                    msg_carga = control_operaciones[op_encontrada].get("msg_carga")
-                    if msg_carga:
-                        try:
-                            bot.delete_message(msg_carga.chat.id, msg_carga.message_id)
-                        except Exception as e:
-                            print(f"⚠️ No se pudo borrar el mensaje de carga: {e}")
+                msg_carga = control_operaciones[op_encontrada].get("msg_carga")
+                if msg_carga:
+                    try:
+                        bot.delete_message(msg_carga.chat.id, msg_carga.message_id)
+                    except Exception as e:
+                        print(f"⚠️ No se pudo borrar el mensaje de carga: {e}")
 
                 with open(ruta_img, 'rb') as foto_enviar:
-                    bot.send_photo(chat_id_hugo, foto_enviar, caption=caption_final, parse_mode="HTML")
-                print(f"✅ [ÉXITO] Reporte final entregado para {placa_detectada} desde {origen_texto}")
+                    bot.send_photo(chat_id_hugo, foto_enviar, caption=caption_final)
+                print(f"✅ [ÉXITO] Reporte final entregado para {placa_detectada} desde FRANCHESCO")
 
                 imagenes_procesadas_recientes.append(placa_detectada)
 
             except Exception as e:
                 print(f"❌ Error en el flujo de réplica: {e}")
 
-            verificar_y_marcar_respuesta(op_encontrada, origen_texto)
+            verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
             if os.path.exists(ruta_img):
                 try: os.remove(ruta_img)
                 except: pass
             return
 
         elif event.message.text:
-            # Si Kimico responde solo texto plano pero contiene el reporte de la consulta
+            # Si Kimico responde mensaje de texto sin foto
             if origen_texto == "KIMICO":
                 texto_raw = event.message.text
-                if "CONSULTA DE PLACA" in texto_raw.upper() or "PROPIETARIO" in texto_raw.upper():
-                    placa_m   = re.search(r"PLACA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                    oficina_m = re.search(r"OFICINA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                    partida_m = re.search(r"N(?:°|O|o)?\s*PARTIDA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                    nombre_m  = re.search(r"NOMBRE\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                    doc_m     = re.search(r"DOC\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                
+                placa_m   = re.search(r"PLACA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                oficina_m = re.search(r"OFICINA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                partida_m = re.search(r"N(?:°|O|o)?\s*PARTIDA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                nombre_m  = re.search(r"NOMBRE\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                doc_m     = re.search(r"DOC\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
 
-                    val_placa   = placa_m.group(1).strip() if placa_m else placa_detectada
-                    val_oficina = oficina_m.group(1).strip() if oficina_m else "NO REGISTRA"
-                    val_partida = partida_m.group(1).strip() if partida_m else "NO REGISTRA"
-                    val_nombre  = nombre_m.group(1).strip() if nombre_m else "NO REGISTRA"
-                    val_doc     = doc_m.group(1).strip() if doc_m else "NO REGISTRA"
+                val_placa   = placa_m.group(1).strip() if placa_m else placa_detectada
+                val_oficina = oficina_m.group(1).strip() if oficina_m else "NO REGISTRA"
+                val_partida = partida_m.group(1).strip() if partida_m else "NO REGISTRA"
+                val_nombre  = nombre_m.group(1).strip() if nombre_m else "NO REGISTRA"
+                val_doc     = doc_m.group(1).strip() if doc_m else "NO REGISTRA"
 
-                    mensaje_kimico = (
-                        f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
-                        f"<b>PLACA :</b> <code>{val_placa}</code>\n"
-                        f"<b>OFICINA :</b> {val_oficina}\n"
-                        f"<b>N° PARTIDA :</b> <code>{val_partida}</code>\n"
-                        f"<b>NOMBRE :</b> {val_nombre}\n"
-                        f"<b>DOC :</b> {val_doc}"
-                    )
-                    bot.send_message(chat_id_hugo, mensaje_kimico, parse_mode="HTML")
-                    verificar_y_marcar_respuesta(op_encontrada, "KIMICO")
-                    return
-                else:
-                    return
+                mensaje_kimico = (
+                    f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
+                    f"<b>PLACA :</b> <code>{val_placa}</code>\n"
+                    f"<b>OFICINA :</b> {val_oficina}\n"
+                    f"<b>N° PARTIDA :</b> <code>{val_partida}</code>\n"
+                    f"<b>NOMBRE :</b> {val_nombre}\n"
+                    f"<b>DOC :</b> {val_doc}"
+                )
+                bot.send_message(chat_id_hugo, mensaje_kimico, parse_mode="HTML")
+                verificar_y_marcar_respuesta(op_encontrada, "KIMICO")
+                return
 
             texto_grupo = event.message.text.upper()
 
