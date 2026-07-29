@@ -158,24 +158,21 @@ async def flujo_especial_north(placa, clave_operacion):
 
     north_respondido_exito[clave_operacion] = False
 
-    print(f"⏱️ [NORTH DATA] Enviando primer intento /tiv {placa} para {clave_operacion}")
+    print(f"⏱️ [NORTH DATA] Enviando primer paso /pla {placa} para {clave_operacion}")
     try:
-        await client.send_message(entidad_north_bot, f"/tiv {placa}")
+        await client.send_message(entidad_north_bot, f"/pla {placa}")
     except Exception as e: 
-        print(f"❌ Error al enviar a North: {e}")
+        print(f"❌ Error al enviar /pla a North: {e}")
 
     await asyncio.sleep(30)
 
-    if north_respondido_exito.get(clave_operacion) == True:
-        print(f"✅ [NORTH DATA] PDF recibido a tiempo para {clave_operacion}. Reintento cancelado.")
-        return
-
+    # Si la operación sigue activa, ejecutamos el segundo paso (/tive)
     if clave_operacion in control_operaciones:
-        print(f"🔄 [NORTH DATA] Sin PDF en 30s. Reintentando con /tive {placa}")
+        print(f"🔄 [NORTH DATA] Pasaron 30s. Ejecutando segundo paso con /tive {placa}")
         try:
             await client.send_message(entidad_north_bot, f"/tive {placa}")
         except Exception as e: 
-            print(f"❌ Error en reintento a North: {e}")
+            print(f"❌ Error en envío de /tive a North: {e}")
 
 def liberar_operacion_de_memoria(clave_operacion):
     global control_operaciones, north_respondido_exito
@@ -242,7 +239,7 @@ def recibir_orden_docs(message):
 
 @bot.message_handler(commands=['placa'])
 def recibir_orden_imagenes(message):
-    global chat_id_hugo, entidad_franchesco, loop_principal, control_operaciones
+    global chat_id_hugo, entidad_north_bot, loop_principal, control_operaciones
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
     if len(texto) < 2:
@@ -252,16 +249,16 @@ def recibir_orden_imagenes(message):
     placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_PLACA"
 
-    if entidad_franchesco:
-        msg_carga = bot.reply_to(message, f"📸 Consultando en FRANCHESCO para {placa}...")
+    if entidad_north_bot:
+        msg_carga = bot.reply_to(message, f"📸 Consultando en NORTH DATA para {placa}...")
         control_operaciones[clave_operacion] = {
             "placa": placa,
             "origen": "PLACA",
             "msg_carga": msg_carga,
-            "motores": {"FRANCHESCO": False}
+            "motores": {"NORTH DATA": False}
         }
         if loop_principal:
-            asyncio.run_coroutine_threadsafe(client.send_message(entidad_franchesco, f"/pla {placa}"), loop_principal)
+            asyncio.run_coroutine_threadsafe(client.send_message(entidad_north_bot, f"/pla {placa}"), loop_principal)
             asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
 
 @bot.message_handler(commands=['tive'])
@@ -803,34 +800,25 @@ async def main():
             verificar_y_marcar_respuesta(op_encontrada, origen_texto)
             return
 
-        elif event.message.media and event.message.photo and origen_texto == "FRANCHESCO":
+        elif event.message.media and event.message.photo and origen_texto in ["FRANCHESCO", "NORTH DATA"]:
             comando_origen = control_operaciones[op_encontrada]["origen"]
             caption_proveedor = event.message.message if event.message.message else ""
 
-            if comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
-                print(f"🤫 Imagen publicitaria/secundaria omitida en ráfaga /{comando_origen.lower()} para {placa_detectada}.")
+            # Filtro para omitir imágenes publicitarias en Franchesco si aplica
+            if origen_texto == "FRANCHESCO" and comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
+                print(f"🤫 Imagen publicitaria omitida en ráfaga para {placa_detectada}.")
                 verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
                 return
 
             palabras_carga_imagen = ["CONSULTANDO PLACA", "POR FAVOR ESPERA", "ESTAMOS PROCESANDO", "UN MOMENTO POR FAVOR"]
             if any(carga in caption_proveedor.upper() for carga in palabras_carga_imagen):
-                print(f"⏳ [PROCESANDO] Se detectó pantalla de carga visual de FRANCHESCO para {placa_detectada}. Esperando el reporte real...")
+                print(f"⏳ [PROCESANDO] Se detectó pantalla de carga visual de {origen_texto} para {placa_detectada}...")
                 return
 
-            if placa_detectada in imagenes_procesadas_recientes:
-                print(f"🛑 [FILTRADO] Mensaje duplicado omitido para {placa_detectada}.")
-                return
-
-            print(f"📸 ¡Reporte final detectado para {placa_detectada} en FRANCHESCO! Procesando...")
+            print(f"📸 ¡Reporte de imagen detectado para {placa_detectada} en {origen_texto}! Enviando...")
             ruta_img = await event.message.download_media(file=f"{placa_detectada}.jpg")
 
             try:
-                if "ESTADO DE CUENTA" in caption_proveedor.upper():
-                    partes = re.split(r'(?i)\[⚡\]\s*ESTADO DE CUENTA|ESTADO DE CUENTA', caption_proveedor)
-                    caption_proveedor = partes[0].strip()
-
-                caption_final = f"📸 Reporte de [FRANCHESCO]:\n\n{caption_proveedor}"
-
                 msg_carga = control_operaciones[op_encontrada].get("msg_carga")
                 if msg_carga:
                     try:
@@ -838,23 +826,25 @@ async def main():
                     except Exception as e:
                         print(f"⚠️ No se pudo borrar el mensaje de carga: {e}")
 
+                # Se envía ÚNICAMENTE la imagen limpia sin caption de texto adicional
                 with open(ruta_img, 'rb') as foto_enviar:
-                    bot.send_photo(chat_id_hugo, foto_enviar, caption=caption_final)
-                print(f"✅ [ÉXITO] Reporte final entregado para {placa_detectada} desde FRANCHESCO")
-
-                imagenes_procesadas_recientes.append(placa_detectada)
+                    bot.send_photo(chat_id_hugo, foto_enviar)
+                print(f"✅ [ÉXITO] Imagen entregada para {placa_detectada} desde {origen_texto}")
 
             except Exception as e:
-                print(f"❌ Error en el flujo de réplica: {e}")
+                print(f"❌ Error en el flujo de envío de foto: {e}")
 
-            verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
+            # Si es una consulta de imagen directa (/placa), marcamos la operación como finalizada
+            if comando_origen == "PLACA":
+                verificar_y_marcar_respuesta(op_encontrada, origen_texto)
+
             if os.path.exists(ruta_img):
                 try: os.remove(ruta_img)
                 except: pass
             return
 
         elif event.message.text:
-            # 🚀 PARSER DIRECTO LÍNEA POR LÍNEA PARA KIMICO
+            # 🚀 PARSER DIRECTO LÍNEA POR LÍNEA PARA KIMICO (CON FECHA PROP)
             if origen_texto == "KIMICO":
                 texto_raw = event.message.text
                 
@@ -867,10 +857,10 @@ async def main():
                 val_partida = "NO REGISTRA"
                 val_nombre = "NO REGISTRA"
                 val_doc = "NO REGISTRA"
+                val_fecha_prop = "NO REGISTRA"
 
                 # Recorremos cada línea limpiando formatos invisibles de Telegram
                 for linea in texto_raw.split("\n"):
-                    # Eliminamos comillas de código, asteriscos y espacios extraños de Telegram
                     linea_limpia = linea.replace("`", "").replace("*", "").replace("_", "").strip()
                     
                     if ":" in linea_limpia:
@@ -891,6 +881,8 @@ async def main():
                             val_nombre = valor_txt
                         elif clave_u == "DOC":
                             val_doc = valor_txt
+                        elif "FECHA PROP" in clave_u:
+                            val_fecha_prop = valor_txt
 
                 mensaje_kimico = (
                     f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
@@ -898,7 +890,8 @@ async def main():
                     f"<b>OFICINA :</b> {val_oficina}\n"
                     f"<b>N° PARTIDA :</b> <code>{val_partida}</code>\n"
                     f"<b>NOMBRE :</b> {val_nombre}\n"
-                    f"<b>DOC :</b> {val_doc}"
+                    f"<b>DOC :</b> {val_doc}\n"
+                    f"<b>FECHA PROP :</b> <code>{val_fecha_prop}</code>"
                 )
                 bot.send_message(chat_id_hugo, mensaje_kimico, parse_mode="HTML")
                 verificar_y_marcar_respuesta(op_encontrada, "KIMICO")
