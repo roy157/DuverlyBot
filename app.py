@@ -804,18 +804,23 @@ async def main():
             comando_origen = control_operaciones[op_encontrada]["origen"]
             caption_proveedor = event.message.message if event.message.message else ""
 
-            # Filtro para omitir imágenes publicitarias en Franchesco si aplica
+            # 1. Filtro para omitir imágenes secundarias/publicitarias de Franchesco en ráfagas
             if origen_texto == "FRANCHESCO" and comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
-                print(f"🤫 Imagen publicitaria omitida en ráfaga para {placa_detectada}.")
+                print(f"🤫 Imagen publicitaria de Franchesco omitida para {placa_detectada}.")
                 verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
                 return
 
-            palabras_carga_imagen = ["CONSULTANDO PLACA", "POR FAVOR ESPERA", "ESTAMOS PROCESANDO", "UN MOMENTO POR FAVOR"]
+            # 2. Palabras clave de carga ampliadas para descartar pantallas de espera (North Data y Franchesco)
+            palabras_carga_imagen = [
+                "CONSULTANDO PLACA", "POR FAVOR ESPERA", "ESTAMOS PROCESANDO", 
+                "UN MOMENTO PORFAVOR", "UN MOMENTO POR FAVOR", "PROCESANDO TU SOLICITUD",
+                "NORTH DATA"
+            ]
             if any(carga in caption_proveedor.upper() for carga in palabras_carga_imagen):
-                print(f"⏳ [PROCESANDO] Se detectó pantalla de carga visual de {origen_texto} para {placa_detectada}...")
+                print(f"⏳ [CARGA OMITIDA] Se descartó el logo/pantalla de espera de {origen_texto} para {placa_detectada}.")
                 return
 
-            print(f"📸 ¡Reporte de imagen detectado para {placa_detectada} en {origen_texto}! Enviando...")
+            print(f"📸 ¡Reporte de imagen real detectado para {placa_detectada} en {origen_texto}! Enviando...")
             ruta_img = await event.message.download_media(file=f"{placa_detectada}.jpg")
 
             try:
@@ -826,7 +831,7 @@ async def main():
                     except Exception as e:
                         print(f"⚠️ No se pudo borrar el mensaje de carga: {e}")
 
-                # Se envía ÚNICAMENTE la imagen limpia sin caption de texto adicional
+                # Se envía únicamente la foto del reporte final
                 with open(ruta_img, 'rb') as foto_enviar:
                     bot.send_photo(chat_id_hugo, foto_enviar)
                 print(f"✅ [ÉXITO] Imagen entregada para {placa_detectada} desde {origen_texto}")
@@ -834,7 +839,6 @@ async def main():
             except Exception as e:
                 print(f"❌ Error en el flujo de envío de foto: {e}")
 
-            # Si es una consulta de imagen directa (/placa), marcamos la operación como finalizada
             if comando_origen == "PLACA":
                 verificar_y_marcar_respuesta(op_encontrada, origen_texto)
 
