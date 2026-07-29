@@ -255,6 +255,7 @@ def recibir_orden_imagenes(message):
             "placa": placa,
             "origen": "PLACA",
             "msg_carga": msg_carga,
+            "fotos_north": 0,  # Contador para filtrar pantalla de carga
             "motores": {"NORTH DATA": False}
         }
         if loop_principal:
@@ -804,20 +805,32 @@ async def main():
             comando_origen = control_operaciones[op_encontrada]["origen"]
             caption_proveedor = event.message.message if event.message.message else ""
 
-            # 1. Filtro para omitir imágenes secundarias/publicitarias de Franchesco en ráfagas
+            # 1. Filtro numérico exclusivo para NORTH DATA: Se descarta la PRIMERA imagen (Logo/Carga)
+            if origen_texto == "NORTH DATA":
+                # Aseguramos la existencia del contador
+                if "fotos_north" not in control_operaciones[op_encontrada]:
+                    control_operaciones[op_encontrada]["fotos_north"] = 0
+                
+                control_operaciones[op_encontrada]["fotos_north"] += 1
+                num_foto = control_operaciones[op_encontrada]["fotos_north"]
+
+                if num_foto == 1:
+                    print(f"⏳ [NORTH DATA] 1.ª imagen (pantalla de carga) descartada para {placa_detectada}. Esperando imagen de resultado...")
+                    return
+
+            # 2. Filtro para omitir imágenes secundarias/publicitarias de Franchesco en ráfagas
             if origen_texto == "FRANCHESCO" and comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
                 print(f"🤫 Imagen publicitaria de Franchesco omitida para {placa_detectada}.")
                 verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
                 return
 
-            # 2. Palabras clave de carga ampliadas para descartar pantallas de espera (North Data y Franchesco)
+            # 3. Filtro secundario por texto si la imagen trae algún aviso de carga explícito
             palabras_carga_imagen = [
                 "CONSULTANDO PLACA", "POR FAVOR ESPERA", "ESTAMOS PROCESANDO", 
-                "UN MOMENTO PORFAVOR", "UN MOMENTO POR FAVOR", "PROCESANDO TU SOLICITUD",
-                "NORTH DATA"
+                "UN MOMENTO PORFAVOR", "UN MOMENTO POR FAVOR", "PROCESANDO TU SOLICITUD"
             ]
             if any(carga in caption_proveedor.upper() for carga in palabras_carga_imagen):
-                print(f"⏳ [CARGA OMITIDA] Se descartó el logo/pantalla de espera de {origen_texto} para {placa_detectada}.")
+                print(f"⏳ [CARGA OMITIDA] Se descartó pantalla de espera con texto de {origen_texto} para {placa_detectada}.")
                 return
 
             print(f"📸 ¡Reporte de imagen real detectado para {placa_detectada} en {origen_texto}! Enviando...")
