@@ -806,30 +806,29 @@ async def main():
             comando_origen = control_operaciones[op_encontrada]["origen"]
             caption_proveedor = event.message.message if event.message.message else ""
 
-            # 🛑 1. FILTRO DEFINITIVO PARA NORTH DATA
-            if origen_texto == "NORTH DATA":
-                # Incrementamos o inicializamos el contador
-                control_operaciones[op_encontrada]["fotos_north"] = control_operaciones[op_encontrada].get("fotos_north", 0) + 1
-                num_foto = control_operaciones[op_encontrada]["fotos_north"]
-
-                # La 1.ª foto de North Data es la pantalla de la corona -> SE IGNORA
-                if num_foto == 1:
-                    print(f"⏳ [NORTH DATA] 1.ª imagen (logo de carga) ignorada para {placa_detectada}.")
-                    return
-
-            # 2. Omitir imágenes publicitarias de Franchesco en ráfagas
-            if origen_texto == "FRANCHESCO" and comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
-                print(f"🤫 Imagen publicitaria de Franchesco omitida para {placa_detectada}.")
-                verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
-                return
-
-            # 3. Descartar cualquier pantalla de espera adicional por palabras clave
+            # 1. Descartar pantallas de espera por leyenda/caption
             palabras_carga_imagen = [
                 "CONSULTANDO PLACA", "POR FAVOR ESPERA", "ESTAMOS PROCESANDO", 
                 "UN MOMENTO PORFAVOR", "UN MOMENTO POR FAVOR", "PROCESANDO TU SOLICITUD"
             ]
             if any(carga in caption_proveedor.upper() for carga in palabras_carga_imagen):
-                print(f"⏳ [CARGA OMITIDA] Se descartó pantalla de espera con texto de {origen_texto} para {placa_detectada}.")
+                print(f"⏳ [CARGA OMITIDA POR CAPTION] Se descartó pantalla negra de North Data para {placa_detectada}.")
+                return
+
+            # 2. Filtro estricto para North Data en flujo TIVE o PLACA
+            if origen_texto == "NORTH DATA":
+                control_operaciones[op_encontrada]["fotos_north"] = control_operaciones[op_encontrada].get("fotos_north", 0) + 1
+                num_foto = control_operaciones[op_encontrada]["fotos_north"]
+
+                # En /tive siempre la 1.ª imagen es el logo de carga de /pla -> Se ignora
+                if comando_origen == "TIVE" and num_foto == 1:
+                    print(f"⏳ [NORTH DATA /TIVE] 1.ª imagen de carga ignorada para {placa_detectada}.")
+                    return
+
+            # 3. Omitir imágenes publicitarias de Franchesco en ráfagas
+            if origen_texto == "FRANCHESCO" and comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
+                print(f"🤫 Imagen publicitaria de Franchesco omitida para {placa_detectada}.")
+                verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
                 return
 
             print(f"📸 ¡Reporte de imagen real detectado para {placa_detectada} en {origen_texto}! Enviando...")
@@ -843,16 +842,15 @@ async def main():
                     except Exception as e:
                         print(f"⚠️ No se pudo borrar el mensaje de carga: {e}")
 
-                # Se envía únicamente la foto del reporte final
+                # Enviar únicamente la imagen con el resultado final
                 with open(ruta_img, 'rb') as foto_enviar:
                     bot.send_photo(chat_id_hugo, foto_enviar)
-                print(f"✅ [ÉXITO] Imagen entregada para {placa_detectada} desde {origen_texto}")
+                print(f"✅ [ÉXITO] Imagen final entregada para {placa_detectada} desde {origen_texto}")
 
             except Exception as e:
                 print(f"❌ Error en el flujo de envío de foto: {e}")
 
-            if comando_origen == "PLACA":
-                verificar_y_marcar_respuesta(op_encontrada, origen_texto)
+            verificar_y_marcar_respuesta(op_encontrada, origen_texto)
 
             if os.path.exists(ruta_img):
                 try: os.remove(ruta_img)
