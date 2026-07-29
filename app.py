@@ -131,7 +131,7 @@ async def mapear_motores_por_id():
                 id_df_vip = dialog.id
                 print(f"🎯 ID DF VIP 03 Fijado: {id_df_vip} ({dialog.name})")
 
-            elif TXT_KIMICO in nombre_chat and dialog.is_group and not entidad_kimico:
+            elif TXT_KIMICO in nombre_chat and not entidad_kimico:
                 entidad_kimico = dialog.input_entity
                 id_kimico = dialog.id
                 print(f"🎯 ID KIMICO Grupo Fijado: {id_kimico} ({dialog.name})")
@@ -763,15 +763,11 @@ async def main():
 
                     # --- FILTRO Y ASIGNACIÓN PARA EL GRUPO KIMICO ---
                     elif origen_texto == "KIMICO":
-                        # 1. Si el mensaje es un comando directo de otro usuario, lo ignoramos
                         if texto_a_buscar.strip().startswith("/"):
                             continue
 
-                        # 2. Comprobamos si el mensaje (o la descripción de la foto) tiene tus marcas
-                        tiene_formato_correcto = "CONSULTA DE PLACA" in texto_a_buscar or "MEXES" in texto_a_buscar or "HUGO" in texto_a_buscar or "BOLETA" in texto_a_buscar
-
-                        # 3. Capturamos si corresponde a TIVE, RQ o al comando BOLETA
-                        if op_data["origen"] in ["TIVE", "RQ", "BOLETA"] and tiene_formato_correcto:
+                        # Aceptamos cualquier reporte que contenga la placa de la operación
+                        if op_data["origen"] in ["TIVE", "RQ", "BOLETA", "PLACA"]:
                             op_encontrada = clave
                             placa_detectada = op_data["placa"]
                             break
@@ -807,54 +803,10 @@ async def main():
             verificar_y_marcar_respuesta(op_encontrada, origen_texto)
             return
 
-        elif event.message.media and event.message.photo and origen_texto in ["FRANCHESCO", "KIMICO"]:
+        elif event.message.media and event.message.photo and origen_texto == "FRANCHESCO":
             comando_origen = control_operaciones[op_encontrada]["origen"]
             caption_proveedor = event.message.message if event.message.message else ""
 
-            # 🚀 FLUJO ESPECÍFICO Y EXCLUSIVO PARA KIMICO
-            if origen_texto == "KIMICO":
-                texto_raw = caption_proveedor
-
-                # 1. Ignoramos pantallas de carga intermedias de Kimico
-                if not ("CONSULTA DE PLACA" in texto_raw.upper() or "PROPIETARIO" in texto_raw.upper()):
-                    print(f"⏳ [KIMICO] Mensaje de carga o preliminar omitido para {placa_detectada}. Esperando el reporte final...")
-                    return
-
-                # 2. Expresiones regulares flexibles para capturar incluso con caracteres invisibles o formatos raros
-                placa_m   = re.search(r"PLACA\s*[:\=]\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
-                oficina_m = re.search(r"OFICINA\s*[:\=]\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
-                partida_m = re.search(r"PARTIDA\s*[:\=]\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
-                nombre_m  = re.search(r"NOMBRE\s*[:\=]\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
-                doc_m     = re.search(r"DOC\s*[:\=]\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
-
-                # Limpieza de cualquier etiqueta HTML o markdown dentro de la captura
-                def limpiar_val(val_raw):
-                    if not val_raw: return None
-                    val = re.sub(r'<[^>]+>', '', val_raw.group(1)).strip()
-                    for c in ['`', '*', '_', '~', '[', ']', '(', ')']:
-                        val = val.replace(c, '')
-                    return val if val else None
-
-                val_placa   = limpiar_val(placa_m) or placa_detectada
-                val_oficina = limpiar_val(oficina_m) or "NO REGISTRA"
-                val_partida = limpiar_val(partida_m) or "NO REGISTRA"
-                val_nombre  = limpiar_val(nombre_m) or "NO REGISTRA"
-                val_doc     = limpiar_val(doc_m) or "NO REGISTRA"
-
-                mensaje_kimico = (
-                    f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
-                    f"<b>PLACA :</b> <code>{val_placa}</code>\n"
-                    f"<b>OFICINA :</b> {val_oficina}\n"
-                    f"<b>N° PARTIDA :</b> <code>{val_partida}</code>\n"
-                    f"<b>NOMBRE :</b> {val_nombre}\n"
-                    f"<b>DOC :</b> {val_doc}"
-                )
-                
-                bot.send_message(chat_id_hugo, mensaje_kimico, parse_mode="HTML")
-                verificar_y_marcar_respuesta(op_encontrada, "KIMICO")
-                return
-
-            # --- A PARTIR DE AQUÍ CONTINÚA SOLO EL FLUJO DE FRANCHESCO ---
             if comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
                 print(f"🤫 Imagen publicitaria/secundaria omitida en ráfaga /{comando_origen.lower()} para {placa_detectada}.")
                 verificar_y_marcar_respuesta(op_encontrada, "FRANCHESCO")
@@ -906,17 +858,28 @@ async def main():
             if origen_texto == "KIMICO":
                 texto_raw = event.message.text
                 
-                placa_m   = re.search(r"PLACA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                oficina_m = re.search(r"OFICINA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                partida_m = re.search(r"N(?:°|O|o)?\s*PARTIDA\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                nombre_m  = re.search(r"NOMBRE\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
-                doc_m     = re.search(r"DOC\s*:\s*([^\n]+)", texto_raw, re.IGNORECASE)
+                # Omitir mensajes de carga o anuncios vacíos
+                if "CONSULTA DE PLACA" not in texto_raw.upper() and "PROPIETARIO" not in texto_raw.upper():
+                    return
 
-                val_placa   = placa_m.group(1).strip() if placa_m else placa_detectada
-                val_oficina = oficina_m.group(1).strip() if oficina_m else "NO REGISTRA"
-                val_partida = partida_m.group(1).strip() if partida_m else "NO REGISTRA"
-                val_nombre  = nombre_m.group(1).strip() if nombre_m else "NO REGISTRA"
-                val_doc     = doc_m.group(1).strip() if doc_m else "NO REGISTRA"
+                # Expresiones regulares ultra flexibles para ignorar sangrías, invisibles o símbolos de Kimico
+                placa_m   = re.search(r"PLACA\s*:\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+                oficina_m = re.search(r"OFICINA\s*:\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+                partida_m = re.search(r"(?:N°|NO|N)?\s*PARTIDA\s*:\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+                nombre_m  = re.search(r"NOMBRE\s*:\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+                doc_m     = re.search(r"DOC\s*:\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+
+                # Limpieza de comillas invertidas, markdown o espacios adicionales
+                def limpiar_campo(m):
+                    if not m: return None
+                    txt = m.group(1).replace("`", "").replace("*", "").strip()
+                    return txt if txt else None
+
+                val_placa   = limpiar_campo(placa_m) or placa_detectada
+                val_oficina = limpiar_campo(oficina_m) or "NO REGISTRA"
+                val_partida = limpiar_campo(partida_m) or "NO REGISTRA"
+                val_nombre  = limpiar_campo(nombre_m) or "NO REGISTRA"
+                val_doc     = limpiar_campo(doc_m) or "NO REGISTRA"
 
                 mensaje_kimico = (
                     f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
