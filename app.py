@@ -854,32 +854,43 @@ async def main():
             return
 
         elif event.message.text:
-            # Si Kimico responde mensaje de texto sin foto
+            # 🚀 PARSER DIRECTO LÍNEA POR LÍNEA PARA KIMICO
             if origen_texto == "KIMICO":
                 texto_raw = event.message.text
                 
-                # Omitir mensajes de carga o anuncios vacíos
+                # Ignoramos avisos o confirmaciones intermedias de Kimico
                 if "CONSULTA DE PLACA" not in texto_raw.upper() and "PROPIETARIO" not in texto_raw.upper():
                     return
 
-                # Expresiones regulares ultra flexibles para ignorar sangrías, invisibles o símbolos de Kimico
-                placa_m   = re.search(r"PLACA\s*:\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
-                oficina_m = re.search(r"OFICINA\s*:\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
-                partida_m = re.search(r"(?:N°|NO|N)?\s*PARTIDA\s*:\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
-                nombre_m  = re.search(r"NOMBRE\s*:\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
-                doc_m     = re.search(r"DOC\s*:\s*([^\n\r]+)", texto_raw, re.IGNORECASE)
+                val_placa = placa_detectada
+                val_oficina = "NO REGISTRA"
+                val_partida = "NO REGISTRA"
+                val_nombre = "NO REGISTRA"
+                val_doc = "NO REGISTRA"
 
-                # Limpieza de comillas invertidas, markdown o espacios adicionales
-                def limpiar_campo(m):
-                    if not m: return None
-                    txt = m.group(1).replace("`", "").replace("*", "").strip()
-                    return txt if txt else None
+                # Recorremos cada línea limpiando formatos invisibles de Telegram
+                for linea in texto_raw.split("\n"):
+                    # Eliminamos comillas de código, asteriscos y espacios extraños de Telegram
+                    linea_limpia = linea.replace("`", "").replace("*", "").replace("_", "").strip()
+                    
+                    if ":" in linea_limpia:
+                        clave, valor = linea_limpia.split(":", 1)
+                        clave_u = clave.upper().strip()
+                        valor_txt = valor.strip()
 
-                val_placa   = limpiar_campo(placa_m) or placa_detectada
-                val_oficina = limpiar_campo(oficina_m) or "NO REGISTRA"
-                val_partida = limpiar_campo(partida_m) or "NO REGISTRA"
-                val_nombre  = limpiar_campo(nombre_m) or "NO REGISTRA"
-                val_doc     = limpiar_campo(doc_m) or "NO REGISTRA"
+                        if not valor_txt:
+                            continue
+
+                        if clave_u == "PLACA":
+                            val_placa = valor_txt
+                        elif clave_u == "OFICINA":
+                            val_oficina = valor_txt
+                        elif "PARTIDA" in clave_u:
+                            val_partida = valor_txt
+                        elif clave_u == "NOMBRE":
+                            val_nombre = valor_txt
+                        elif clave_u == "DOC":
+                            val_doc = valor_txt
 
                 mensaje_kimico = (
                     f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
