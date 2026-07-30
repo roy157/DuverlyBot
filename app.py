@@ -112,7 +112,7 @@ async def mapear_motores_por_id():
     print("📋 Sincronizando e indexando IDs reales de Telegram...")
 
     # 🛑 ACTUALIZADO: Limpiamos los grupos obsoletos de la lista negra
-    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER"]
+    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]"]
 
     async for dialog in client.iter_dialogs(limit=150):
         if dialog.name:
@@ -268,9 +268,6 @@ def recibir_orden_tive_global(message):
     global entidad_ghostops, entidad_franchesco, entidad_north_bot, entidad_liam_bot, entidad_kimico
 
     chat_id_hugo = message.chat.id  
-    print(f"🚀 Ejecutando /tive para Chat ID: {chat_id_hugo}")
-    print(f"📊 Estado de Entidades -> North: {bool(entidad_north_bot)}, Kimico: {bool(entidad_kimico)}")
-
     texto = message.text.split()
     if len(texto) < 2:
         bot.reply_to(message, "❌ Envía la placa. Ejemplo: /tive CAJ270")
@@ -285,7 +282,7 @@ def recibir_orden_tive_global(message):
         "placa": placa,
         "origen": "TIVE",
         "msg_carga": msg_carga,
-        "fotos_north": 0,
+        "fotos_north": 0,  # Contador obligatorio para omitir el logo de North Data en ráfagas
         "motores": {
             "GhostOps": False,
             "FRANCHESCO": False,
@@ -295,19 +292,21 @@ def recibir_orden_tive_global(message):
         }
     }
 
+    # 1. Envíos a proveedores directos por grupo/bot
     if entidad_franchesco:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_franchesco, f"/tive {placa}"), loop_principal)
     if entidad_ghostops:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/tive {placa}"), loop_principal)
-    if entidad_north_bot:
-        print(f"📤 Disparando flujo especial a North Data para {placa}...")
-        asyncio.run_coroutine_threadsafe(flujo_especial_north(placa, clave_operacion), loop_principal)
-    if entidad_liam_bot:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_liam_bot, f"/tive {placa}"), loop_principal)
+    
+    # 🔥 CORRECCIÓN 1: Agregar el envío al grupo KIMICO
     if entidad_kimico:
-        print(f"📤 Disparando /pla a Kimico para {placa}...")
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/pla {placa}"), loop_principal)
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/tive {placa}"), loop_principal)
 
+    # 🔥 CORRECCIÓN 2: Ejecutar el flujo de dos pasos para NORTH DATA
+    if entidad_north_bot:
+        asyncio.run_coroutine_threadsafe(flujo_especial_north(placa, clave_operacion), loop_principal)
+
+    # Corremos el timeout general para liberar memoria si algún motor falla
     asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
 
 @bot.message_handler(commands=['boleta'])
@@ -347,6 +346,9 @@ def recibir_orden_boleta_global(message):
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_franchesco, f"/boi {placa}"), loop_principal)
     if entidad_ghostops:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/boi {placa}"), loop_principal)
+    if entidad_kimico:
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/boleta {placa}"), loop_principal)
+
 
 @bot.message_handler(commands=['propiedades'])
 def recibir_orden_partidadni_global(message):
