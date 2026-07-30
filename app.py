@@ -51,7 +51,7 @@ except KeyError as e:
 
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
-TXT_DF_VIP     = "DF VIP"
+TXT_DF_VIP     = "GHOSTOPS"
 TXT_KIMICO     = "KIMICO"  # Nueva palabra clave para el grupo Kimico
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
@@ -112,7 +112,7 @@ async def mapear_motores_por_id():
     print("📋 Sincronizando e indexando IDs reales de Telegram...")
 
     # 🛑 ACTUALIZADO: Limpiamos los grupos obsoletos de la lista negra
-    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]"]
+    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]", "GhostOps"]
 
     async for dialog in client.iter_dialogs(limit=150):
         if dialog.name:
@@ -125,11 +125,11 @@ async def mapear_motores_por_id():
                 id_franchesco = dialog.id
                 print(f"🎯 ID Franchesco Fijado: {id_franchesco} ({dialog.name})") 
 
-            # 🚀 CORRECCIÓN: Captura el nuevo grupo DF VIP 03 asegurando que coincida el texto
-            elif TXT_DF_VIP in nombre_chat and "03" in nombre_chat and not entidad_df_vip:
+            # 🚀 Captura el nuevo grupo GhostOps 
+            elif TXT_DF_VIP in nombre_chat and not entidad_df_vip:
                 entidad_df_vip = dialog.input_entity
                 id_df_vip = dialog.id
-                print(f"🎯 ID DF VIP 03 Fijado: {id_df_vip} ({dialog.name})")
+                print(f"🎯 ID GhostOps Fijado: {id_df_vip} ({dialog.name})")
 
             elif TXT_KIMICO in nombre_chat and not entidad_kimico:
                 entidad_kimico = dialog.input_entity
