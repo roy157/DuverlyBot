@@ -51,7 +51,7 @@ except KeyError as e:
 
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
-TXT_DF_VIP     = "GHOSTOPS"
+TXT_GHOSTOPS   = "GHOSTOPS"
 TXT_KIMICO     = "KIMICO"  # Nueva palabra clave para el grupo Kimico
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
@@ -87,13 +87,13 @@ chat_id_hugo = None
 loop_principal = None  
 
 entidad_franchesco = None
-entidad_df_vip     = None
+entidad_ghostops   = None
 entidad_north_bot  = None  
 entidad_liam_bot   = None
 entidad_kimico     = None  # Nueva entidad
 
 id_franchesco = None
-id_df_vip     = None
+id_ghostops   = None
 id_north_bot  = None
 id_liam_bot   = None
 id_kimico     = None  # Nuevo ID
@@ -103,8 +103,8 @@ north_respondido_exito = {}
 imagenes_procesadas_recientes = []  
 
 async def mapear_motores_por_id():
-    global entidad_franchesco, entidad_df_vip, entidad_north_bot, entidad_liam_bot, entidad_kimico
-    global id_franchesco, id_df_vip, id_north_bot, id_liam_bot, id_kimico
+    global entidad_franchesco, entidad_ghostops, entidad_north_bot, entidad_liam_bot, entidad_kimico
+    global id_franchesco, id_ghostops, id_north_bot, id_liam_bot, id_kimico
 
     if not client.is_connected():
         await client.connect()
@@ -112,7 +112,7 @@ async def mapear_motores_por_id():
     print("📋 Sincronizando e indexando IDs reales de Telegram...")
 
     # 🛑 ACTUALIZADO: Limpiamos los grupos obsoletos de la lista negra
-    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]", "GhostOps"]
+    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]"]
 
     async for dialog in client.iter_dialogs(limit=150):
         if dialog.name:
@@ -125,11 +125,11 @@ async def mapear_motores_por_id():
                 id_franchesco = dialog.id
                 print(f"🎯 ID Franchesco Fijado: {id_franchesco} ({dialog.name})") 
 
-            # 🚀 Captura el nuevo grupo GhostOps 
-            elif TXT_DF_VIP in nombre_chat and not entidad_df_vip:
-                entidad_df_vip = dialog.input_entity
-                id_df_vip = dialog.id
-                print(f"🎯 ID GhostOps Fijado: {id_df_vip} ({dialog.name})")
+            # 🚀 CORRECCIÓN: Captura el nuevo grupo DF VIP 03 asegurando que coincida el texto
+            elif TXT_GHOSTOPS in nombre_chat and not entidad_ghostops:
+                entidad_ghostops = dialog.input_entity
+                id_ghostops = dialog.id
+                print(f"🎯 ID GhostOps Fijado: {id_ghostops} ({dialog.name})")
 
             elif TXT_KIMICO in nombre_chat and not entidad_kimico:
                 entidad_kimico = dialog.input_entity
@@ -215,7 +215,7 @@ def verificar_y_marcar_respuesta(clave_operacion, motor):
 
 @bot.message_handler(commands=['partida'])
 def recibir_orden_docs(message):
-    global chat_id_hugo, entidad_df_vip, loop_principal, control_operaciones
+    global chat_id_hugo, entidad_ghostops, loop_principal, control_operaciones
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
     if len(texto) < 2:
@@ -225,16 +225,16 @@ def recibir_orden_docs(message):
     placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_PARTIDA"
 
-    if entidad_df_vip:
-        msg_carga = bot.reply_to(message, f"🔍 Consultando PDF para {placa} en DF VIP...")
+    if entidad_ghostops:
+        msg_carga = bot.reply_to(message, f"🔍 Consultando PDF para {placa} en GhostOps...")
         control_operaciones[clave_operacion] = {
             "placa": placa,
             "origen": "PARTIDA",
             "msg_carga": msg_carga,
-            "motores": {"DF VIP": False}
+            "motores": {"GhostOps": False}
         }
         if loop_principal:
-            asyncio.run_coroutine_threadsafe(client.send_message(entidad_df_vip, f"/PARTIDAV {placa}"), loop_principal)
+            asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/PARTIDAV {placa}"), loop_principal)
             asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
 
 @bot.message_handler(commands=['placa'])
@@ -265,7 +265,7 @@ def recibir_orden_imagenes(message):
 @bot.message_handler(commands=['tive'])
 def recibir_orden_tive_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
-    global entidad_df_vip, entidad_franchesco, entidad_north_bot, entidad_liam_bot, entidad_kimico
+    global entidad_ghostops, entidad_franchesco, entidad_north_bot, entidad_liam_bot, entidad_kimico
 
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
@@ -284,7 +284,7 @@ def recibir_orden_tive_global(message):
         "msg_carga": msg_carga,
         "fotos_north": 0,  # Contador obligatorio para omitir el logo de North Data en ráfagas
         "motores": {
-            "DF VIP": False,
+            "GhostOps": False,
             "FRANCHESCO": False,
             "NORTH DATA": False,
             "LIAM DATA": False,
@@ -294,22 +294,13 @@ def recibir_orden_tive_global(message):
 
     if entidad_franchesco:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_franchesco, f"/tive {placa}"), loop_principal)
-    if entidad_df_vip:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_df_vip, f"/tive {placa}"), loop_principal)
-    if entidad_north_bot:
-        asyncio.run_coroutine_threadsafe(flujo_especial_north(placa, clave_operacion), loop_principal)
-    if entidad_liam_bot:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_liam_bot, f"/tive {placa}"), loop_principal)
-    if entidad_kimico:
-        # Para el grupo KIMICO enviamos el comando alternativo /pla
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/pla {placa}"), loop_principal)
-
-    asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
+    if entidad_ghostops:
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/tive {placa}"), loop_principal)
 
 @bot.message_handler(commands=['boleta'])
 def recibir_orden_boleta_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
-    global entidad_df_vip, entidad_franchesco, entidad_north_bot, entidad_liam_bot
+    global entidad_ghostops, entidad_franchesco, entidad_north_bot, entidad_liam_bot
 
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
@@ -331,7 +322,7 @@ def recibir_orden_boleta_global(message):
         "origen": "BOLETA", 
         "msg_carga": msg_carga,
         "motores": {
-            "DF VIP": False,
+            "GhostOps": False,
             "FRANCHESCO": False,
             "NORTH DATA": False,
             "LIAM DATA": False,
@@ -341,22 +332,13 @@ def recibir_orden_boleta_global(message):
 
     if entidad_franchesco:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_franchesco, f"/boi {placa}"), loop_principal)
-    if entidad_df_vip:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_df_vip, f"/boi {placa}"), loop_principal)
-    if entidad_liam_bot:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_liam_bot, f"/bolif {placa}"), loop_principal)
-    if entidad_north_bot:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_north_bot, f"/bolinf {placa}"), loop_principal)
-    # CONDICIÓN para que también le escriba a Kimico
-    if entidad_kimico:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/boleta {placa}"), loop_principal)
-
-    asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
+    if entidad_ghostops:
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/boi {placa}"), loop_principal)
 
 @bot.message_handler(commands=['propiedades'])
 def recibir_orden_partidadni_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
-    global entidad_df_vip, entidad_franchesco
+    global entidad_ghostops, entidad_franchesco
 
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
@@ -378,22 +360,20 @@ def recibir_orden_partidadni_global(message):
         "origen": "PARTIDADNI", 
         "msg_carga": msg_carga,
         "motores": {
-            "DF VIP": False,
+            "GhostOps": False,
             "FRANCHESCO": False
         }
     }
 
     if entidad_franchesco:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_franchesco, f"/propdf {dni}"), loop_principal)
-    if entidad_df_vip:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_df_vip, f"/propdf {dni}"), loop_principal)
-
-    asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
+    if entidad_ghostops:
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/propdf {dni}"), loop_principal)
 
 @bot.message_handler(commands=['nombre'])
 def recibir_orden_nombre_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
-    global entidad_df_vip, entidad_franchesco
+    global entidad_ghostops, entidad_franchesco
 
     chat_id_hugo = message.chat.id  
     texto_completo = message.text.split(maxsplit=1)
@@ -418,22 +398,20 @@ def recibir_orden_nombre_global(message):
         "origen": "NOMBRE", 
         "msg_carga": msg_carga,
         "motores": {
-            "DF VIP": False,
+            "GhostOps": False,
             "FRANCHESCO": False
         }
     }
 
     if entidad_franchesco:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_franchesco, f"/nm {nombre_formateado}"), loop_principal)
-    if entidad_df_vip:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_df_vip, f"/nm {nombre_formateado}"), loop_principal)
-
-    asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 120), loop_principal)
+    if entidad_ghostops:
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/nm {nombre_formateado}"), loop_principal)
 
 @bot.message_handler(commands=['denuncias'])
 def recibir_orden_denuncias_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
-    global entidad_df_vip, entidad_franchesco
+    global entidad_ghostops, entidad_franchesco
 
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
@@ -456,17 +434,15 @@ def recibir_orden_denuncias_global(message):
         "origen": "DENUNCIAS", 
         "msg_carga": msg_carga,
         "motores": {
-            "DF VIP": False,
+            "GhostOps": False,
             "FRANCHESCO": False
         }
     }
 
     if entidad_franchesco:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_franchesco, f"/denpla {placa}"), loop_principal)
-    if entidad_df_vip:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_df_vip, f"/denunv {placa}"), loop_principal)
-
-    asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
+    if entidad_ghostops:
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/denunv {placa}"), loop_principal)
 
 @bot.message_handler(commands=['rq'])
 def recibir_orden_rq_global(message):
@@ -550,7 +526,7 @@ def responder_clicks_botones(call):
 
         texto_vehiculos = (
             "📋 <b>[ CATEGORÍA ⇒ VEHÍCULOS ]</b>\n\n"
-            "1️⃣ <b>CONSULTA PARTIDA DEL VEHICULO (DF VIP)</b>\n"
+            "1️⃣ <b>CONSULTA PARTIDA DEL VEHICULO (GhostOps)</b>\n"
             "• Comando: /partida [placa] \n"
             "• Ejemplo: /partida CAJ270 \n\n"
             "2️⃣ <b>CONSULTA PLACA (FRANCHESCO)</b>\n"
@@ -650,7 +626,7 @@ def arrancar_bot_padre():
 # --- FUNCIÓN PRINCIPAL ASÍNCRONA ---
 async def main():
     global loop_principal, control_operaciones, north_respondido_exito
-    global id_franchesco, id_df_vip, id_north_bot, id_liam_bot
+    global id_franchesco, id_ghostops, id_north_bot, id_liam_bot
     loop_principal = asyncio.get_running_loop()
 
     await mapear_motores_por_id()
@@ -658,7 +634,7 @@ async def main():
     @client.on(events.NewMessage())
     async def escuchador_global_mensajes(event):
         global chat_id_hugo, control_operaciones, north_respondido_exito
-        global id_franchesco, id_df_vip, id_north_bot, id_liam_bot, id_kimico
+        global id_franchesco, id_ghostops, id_north_bot, id_liam_bot, id_kimico
 
         chat_actual_id = event.chat_id
         if not chat_id_hugo or not control_operaciones:
@@ -667,7 +643,7 @@ async def main():
         origen_texto = "DESCONOCIDO"
 
         if id_franchesco and chat_actual_id == id_franchesco: origen_texto = "FRANCHESCO"
-        elif id_df_vip and chat_actual_id == id_df_vip: origen_texto = "DF VIP"
+        elif id_ghostops and chat_actual_id == id_ghostops: origen_texto = "GhostOps"
         elif id_north_bot and chat_actual_id == id_north_bot: origen_texto = "NORTH DATA"
         elif id_liam_bot and chat_actual_id == id_liam_bot: origen_texto = "LIAM DATA"
         elif id_kimico and chat_actual_id == id_kimico: origen_texto = "KIMICO"  # Identifica el grupo
@@ -713,7 +689,7 @@ async def main():
                             op_encontrada = clave
                             placa_detectada = op_data["placa"]
                             break
-                    elif origen_texto == "DF VIP":
+                    elif origen_texto == "GhostOps":
                         # Modificado para filtrar solo mensajes que tengan marcas correctas en /propiedades
                         if op_data["origen"] == "PARTIDADNI":
                             if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
@@ -952,20 +928,20 @@ async def main():
                     verificar_y_marcar_respuesta(op_encontrada, origen_texto)
                     return
 
-            if origen_texto == "DF VIP":
+            if origen_texto == "GhostOps":
                 es_error_df = "NO SE ENCONTRÓ" in texto_grupo or "NO SE ENCONTRO" in texto_grupo or "ERROR" in texto_grupo or "NO EXISTE" in texto_grupo
 
                 if es_error_df:
-                    print(f"❌ [DF VIP] Reportó falta de datos para {placa_detectada}.")
+                    print(f"❌ [GhostOps] Reportó falta de datos para {placa_detectada}.")
 
                     # SI FALLÓ EL TIVE, CORREMOS LA LOGICA DE RETARDO Y ADVERTENCIA
                     if comando_origen == "TIVE":
-                        print(f"🔄 [DF VIP CONTROLADO] TIVE no encontrada. Avisando y programando /partidav en 15s...")
+                        print(f"🔄 [GhostOps CONTROLADO] TIVE no encontrada. Avisando y programando /partidav en 15s...")
 
                         # 1. Enviar el mensaje inmediato al usuario avisando que no tenía TIVE con parseo HTML activo
                         bot.send_message(
                             chat_id_hugo, 
-                            f"⚠️ <b>Aviso [DF VIP]:</b>\n🏁 Placa: <code>{placa_detectada}</code>\n\n❌ No se encontró la TIVE. Esperando 15 segundos para consultar Partida...",
+                            f"⚠️ <b>Aviso [GhostOps]:</b>\n🏁 Placa: <code>{placa_detectada}</code>\n\n❌ No se encontró la TIVE. Esperando 15 segundos para consultar Partida...",
                             parse_mode="HTML"
                         )
 
@@ -974,12 +950,12 @@ async def main():
                             await asyncio.sleep(15)
                             global control_operaciones
                             if clave_op in control_operaciones:
-                                print(f"🚀 [DF VIP] Pasaron los 15s. Soltando comando: /partidav {placa}")
+                                print(f"🚀 [GhostOps] Pasaron los 15s. Soltando comando: /partidav {placa}")
                                 control_operaciones[clave_op]["origen"] = "PARTIDAV"
                                 await client.send_message(id_grupo, f"/partidav {placa}")
 
                         # Lanzamos la espera en el loop principal para no bloquear el flujo del bot
-                        asyncio.run_coroutine_threadsafe(ejecutar_respaldo_partida(id_df_vip, placa_detectada, op_encontrada), loop_principal)
+                        asyncio.run_coroutine_threadsafe(ejecutar_respaldo_partida(id_ghostops, placa_detectada, op_encontrada), loop_principal)
                         return
 
                     # Si ya falló estando en PARTIDAV, DENUNCIAS o PARTIDADNI, cerramos la operación normalmente
@@ -996,9 +972,9 @@ async def main():
                 elif comando_origen == "PARTIDAV":
                     # Si tiene marcas de que es el reporte final en texto plano, lo dejamos pasar
                     if "MEXES" in texto_grupo or "PARTIDA" in texto_grupo:
-                        print(f"✅ [DF VIP] Detectado texto plano final de Partida para {placa_detectada}.")
+                        print(f"✅ [GhostOps] Detectado texto plano final de Partida para {placa_detectada}.")
                     else:
-                        print(f"🤫 Texto plano intermedio de DF VIP ignorado para {placa_detectada}. Esperando el reporte...")
+                        print(f"🤫 Texto plano intermedio de GhostOps ignorado para {placa_detectada}. Esperando el reporte...")
                         return
 
             if origen_texto == "NORTH DATA":
