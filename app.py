@@ -300,7 +300,7 @@ def recibir_orden_tive_global(message):
     
     # 🔥 CORRECCIÓN 1: Agregar el envío al grupo KIMICO
     if entidad_kimico:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/tive {placa}"), loop_principal)
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/pla {placa}"), loop_principal)
 
     # 🔥 CORRECCIÓN 2: Ejecutar el flujo de dos pasos para NORTH DATA
     if entidad_north_bot:
