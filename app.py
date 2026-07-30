@@ -348,8 +348,12 @@ def recibir_orden_boleta_global(message):
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/boi {placa}"), loop_principal)
     if entidad_kimico:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/boleta {placa}"), loop_principal)
+    if entidad_north_bot:
+        asyncio.run_coroutine_threadsafe(client.send_message(entidad_north_bot, f"/bolif {placa}"), loop_principal)
 
-
+    # Corremos el timeout de seguridad para liberar memoria tras 90s
+    asyncio.run_coroutine_threadsafe(timeout_seguridad_operacion(clave_operacion, 90), loop_principal)
+    
 @bot.message_handler(commands=['propiedades'])
 def recibir_orden_partidadni_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
