@@ -856,12 +856,11 @@ async def main():
             return
 
         elif event.message.text:
-            # 🚀 PARSER DIRECTO LÍNEA POR LÍNEA PARA KIMICO (CON FECHA PROP)
+            # 🚀 PARSER DIRECTO LÍNEA POR LÍNEA PARA KIMICO (BLINDADO PARA GRUPOS PÚBLICOS)
             if origen_texto == "KIMICO BOT":
                 texto_raw = event.message.text
-                
-                # Aceptamos el mensaje si contiene los datos de la placa o el reporte de Kimico
                 texto_U = texto_raw.upper()
+                
                 if "PLACA" not in texto_U and "MARCA" not in texto_U:
                     return
 
@@ -872,17 +871,13 @@ async def main():
                 val_doc = "NO REGISTRA"
                 val_fecha_prop = "NO REGISTRA"
 
-                # Recorremos cada línea limpiando formatos invisibles de Telegram
                 for linea in texto_raw.split("\n"):
                     linea_limpia = linea.replace("`", "").replace("*", "").replace("_", "").strip()
-                    
                     if ":" in linea_limpia:
                         clave, valor = linea_limpia.split(":", 1)
                         clave_u = clave.upper().strip()
                         valor_txt = valor.strip()
-
-                        if not valor_txt:
-                            continue
+                        if not valor_txt: continue
 
                         if clave_u == "PLACA":
                             val_placa = valor_txt
@@ -896,6 +891,11 @@ async def main():
                             val_doc = valor_txt
                         elif "FECHA PROP" in clave_u:
                             val_fecha_prop = valor_txt
+
+                # 🔒 SEGURIDAD ANTI-CRUCE: Verificamos que la placa extraída pertenezca estrictamente a tu operación activa
+                if val_placa.replace(" ", "") != placa_detectada.replace(" ", ""):
+                    print(f"🛡️ [KIMICO SEGURO] Ignorando reporte ajeno. Placa detectada en grupo: {val_placa} | Esperada: {placa_detectada}")
+                    return
 
                 mensaje_kimico = (
                     f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
