@@ -131,7 +131,7 @@ async def mapear_motores_por_id():
                 id_ghostops = dialog.id
                 print(f"🎯 ID GhostOps Fijado: {id_ghostops} ({dialog.name})")
 
-            elif "KIMICO BOT" in nombre_chat and not entidad_kimico:
+            elif "kimico" in nombre_chat.lower() and "bot" in nombre_chat.lower() and not entidad_kimico:
               entidad_kimico = dialog.input_entity
               id_kimico = dialog.id
               print(f"🎯 ID KIMICO BOT (Habilitado) Fijado: {id_kimico} ({dialog.name})")
@@ -288,7 +288,7 @@ def recibir_orden_tive_global(message):
             "FRANCHESCO": False,
             "NORTH DATA": False,
             "LIAM DATA": False,
-            "KIMICO": False
+            "KIMICO BOT": False
         }
     }
 
