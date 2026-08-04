@@ -52,7 +52,7 @@ except KeyError as e:
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
 TXT_GHOSTOPS   = "GHOSTOPS"
-TXT_KIMICO     = "KIMICO BOT"
+TXT_KIMICO     = "KIMICO BOT"  # Apunta exactamente al nuevo grupo
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
 USER_NORTH_BOT = "northdatabasicbot"
@@ -111,16 +111,16 @@ async def mapear_motores_por_id():
 
     print("📋 Sincronizando e indexando IDs reales de Telegram...")
 
-    # 🛑 ACTUALIZADO: Incluimos "KIMICO" en mayúsculas en la lista negra para forzarlo a ignorarlo
+    # 🛑 ACTUALIZADO: Limpiamos los grupos obsoletos y bloqueamos el KIMICO antiguo
     GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]", "KIMICO"]
 
     async for dialog in client.iter_dialogs(limit=150):
         if dialog.name:
-            nombre_real = dialog.name.strip()  # Mantenemos el nombre original para evaluar mayúsculas/minúsculas exactas
-            nombre_chat = nombre_real.upper()
-            
-            # Si el grupo se llama exactamente "KIMICO" (mayúsculas), lo salta por la lista negra
-            if any(obviar.upper() == nombre_chat for obviar in GRUPOS_A_OBVIAR):
+            nombre_chat = dialog.name.upper().strip()
+            # Excepción: Permitimos que pase si contiene "KIMICO BOT" exactamente
+            if "KIMICO" in nombre_chat and "KIMICO BOT" not in nombre_chat:
+                continue
+            if any(obviar.upper() in nombre_chat for obviar in GRUPOS_A_OBVIAR):
                 continue
 
             if TXT_FRANCHESCO in nombre_chat and not entidad_franchesco:
@@ -128,16 +128,16 @@ async def mapear_motores_por_id():
                 id_franchesco = dialog.id
                 print(f"🎯 ID Franchesco Fijado: {id_franchesco} ({dialog.name})") 
 
+            # 🚀 CORRECCIÓN: Captura el nuevo grupo DF VIP 03 asegurando que coincida el texto
             elif TXT_GHOSTOPS in nombre_chat and not entidad_ghostops:
                 entidad_ghostops = dialog.input_entity
                 id_ghostops = dialog.id
                 print(f"🎯 ID GhostOps Fijado: {id_ghostops} ({dialog.name})")
 
-            # Búsqueda estricta para capturar "Kimico bot" respetando las variaciones que mencionas
-            elif "KIMICO" in nombre_chat and "BOT" in nombre_chat and not entidad_kimico:
+            elif TXT_KIMICO in nombre_chat and not entidad_kimico:
                 entidad_kimico = dialog.input_entity
                 id_kimico = dialog.id
-                print(f"🎯 ID KIMICO BOT Fijado: {id_kimico} ({dialog.name})")
+                print(f"🎯 ID KIMICO Grupo Fijado: {id_kimico} ({dialog.name})")
 
     try:
         entidad_north_bot = await client.get_input_entity(USER_NORTH_BOT)
@@ -668,7 +668,7 @@ async def main():
         elif id_ghostops and chat_actual_id == id_ghostops: origen_texto = "GhostOps"
         elif id_north_bot and chat_actual_id == id_north_bot: origen_texto = "NORTH DATA"
         elif id_liam_bot and chat_actual_id == id_liam_bot: origen_texto = "LIAM DATA"
-        elif id_kimico and chat_actual_id == id_kimico: origen_texto = "KIMICO BOT"  # Identifica el grupo
+        elif id_kimico and chat_actual_id == id_kimico: origen_texto = "KIMICO"  # Identifica el grupo
 
         if origen_texto == "DESCONOCIDO": return
 
@@ -759,7 +759,7 @@ async def main():
                             continue
 
                     # --- FILTRO Y ASIGNACIÓN PARA EL GRUPO KIMICO ---
-                    elif origen_texto == "KIMICO BOT":
+                    elif origen_texto == "KIMICO":
                         if texto_a_buscar.strip().startswith("/"):
                             continue
 
@@ -856,12 +856,12 @@ async def main():
             return
 
         elif event.message.text:
-            # 🚀 PARSER DIRECTO LÍNEA POR LÍNEA PARA KIMICO (BLINDADO PARA GRUPOS PÚBLICOS)
-            if origen_texto == "KIMICO BOT":
+            # 🚀 PARSER DIRECTO LÍNEA POR LÍNEA PARA KIMICO (CON FECHA PROP)
+            if origen_texto == "KIMICO":
                 texto_raw = event.message.text
-                texto_U = texto_raw.upper()
                 
-                if "PLACA" not in texto_U and "MARCA" not in texto_U:
+                # Ignoramos avisos o confirmaciones intermedias de Kimico
+                if "CONSULTA DE PLACA" not in texto_raw.upper() and "PROPIETARIO" not in texto_raw.upper():
                     return
 
                 val_placa = placa_detectada
@@ -871,13 +871,17 @@ async def main():
                 val_doc = "NO REGISTRA"
                 val_fecha_prop = "NO REGISTRA"
 
+                # Recorremos cada línea limpiando formatos invisibles de Telegram
                 for linea in texto_raw.split("\n"):
                     linea_limpia = linea.replace("`", "").replace("*", "").replace("_", "").strip()
+                    
                     if ":" in linea_limpia:
                         clave, valor = linea_limpia.split(":", 1)
                         clave_u = clave.upper().strip()
                         valor_txt = valor.strip()
-                        if not valor_txt: continue
+
+                        if not valor_txt:
+                            continue
 
                         if clave_u == "PLACA":
                             val_placa = valor_txt
@@ -892,11 +896,6 @@ async def main():
                         elif "FECHA PROP" in clave_u:
                             val_fecha_prop = valor_txt
 
-                # 🔒 SEGURIDAD ANTI-CRUCE: Verificamos que la placa extraída pertenezca estrictamente a tu operación activa
-                if val_placa.replace(" ", "") != placa_detectada.replace(" ", ""):
-                    print(f"🛡️ [KIMICO SEGURO] Ignorando reporte ajeno. Placa detectada en grupo: {val_placa} | Esperada: {placa_detectada}")
-                    return
-
                 mensaje_kimico = (
                     f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
                     f"<b>PLACA :</b> <code>{val_placa}</code>\n"
@@ -907,7 +906,7 @@ async def main():
                     f"<b>FECHA PROP :</b> <code>{val_fecha_prop}</code>"
                 )
                 bot.send_message(chat_id_hugo, mensaje_kimico, parse_mode="HTML")
-                verificar_y_marcar_respuesta(op_encontrada, "KIMICO BOT")
+                verificar_y_marcar_respuesta(op_encontrada, "KIMICO")
                 return
 
             texto_grupo = event.message.text.upper()
