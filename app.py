@@ -111,33 +111,37 @@ async def mapear_motores_por_id():
 
     print("📋 Sincronizando e indexando IDs reales de Telegram...")
 
-    # 🛑 ACTUALIZADO: Limpiamos los grupos obsoletos y bloqueamos el KIMICO antiguo
-    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]", "KIMICO"]
+    # 🛑 ACTUALIZADO: Bloqueo estricto del grupo KIMICO antiguo y captura segura del nuevo
+    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]"]
 
     async for dialog in client.iter_dialogs(limit=150):
         if dialog.name:
-            nombre_chat = dialog.name.upper().strip()
-            # Excepción: Permitimos que pase si contiene "KIMICO BOT" exactamente
-            if "KIMICO" in nombre_chat and "KIMICO BOT" not in nombre_chat:
-                continue
-            if any(obviar.upper() in nombre_chat for obviar in GRUPOS_A_OBVIAR):
+            nombre_chat_original = dialog.name.strip()
+            nombre_chat_upper = nombre_chat_original.upper()
+
+            if any(obviar.upper() in nombre_chat_upper for obviar in GRUPOS_A_OBVIAR):
                 continue
 
-            if TXT_FRANCHESCO in nombre_chat and not entidad_franchesco:
+            # IGNORAR EL GRUPO ANTIGUO: Si se llama "KIMICO" a secas o no contiene la palabra "BOT"
+            if "KIMICO" in nombre_chat_upper and "BOT" not in nombre_chat_upper:
+                print(f"🚫 Ignorando grupo antiguo obsoleto: {dialog.name}")
+                continue
+
+            if TXT_FRANCHESCO in nombre_chat_upper and not entidad_franchesco:
                 entidad_franchesco = dialog.input_entity
                 id_franchesco = dialog.id
                 print(f"🎯 ID Franchesco Fijado: {id_franchesco} ({dialog.name})") 
 
-            # 🚀 CORRECCIÓN: Captura el nuevo grupo DF VIP 03 asegurando que coincida el texto
-            elif TXT_GHOSTOPS in nombre_chat and not entidad_ghostops:
+            elif TXT_GHOSTOPS in nombre_chat_upper and not entidad_ghostops:
                 entidad_ghostops = dialog.input_entity
                 id_ghostops = dialog.id
                 print(f"🎯 ID GhostOps Fijado: {id_ghostops} ({dialog.name})")
 
-            elif TXT_KIMICO in nombre_chat and not entidad_kimico:
+            # CAPTURA EXCLUSIVA DEL NUEVO GRUPO KIMICO BOT
+            elif "KIMICO" in nombre_chat_upper and "BOT" in nombre_chat_upper and not entidad_kimico:
                 entidad_kimico = dialog.input_entity
                 id_kimico = dialog.id
-                print(f"🎯 ID KIMICO Grupo Fijado: {id_kimico} ({dialog.name})")
+                print(f"🎯 ID KIMICO BOT Fijado Correctamente: {id_kimico} ({dialog.name})")
 
     try:
         entidad_north_bot = await client.get_input_entity(USER_NORTH_BOT)
