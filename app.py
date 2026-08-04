@@ -52,7 +52,7 @@ except KeyError as e:
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
 TXT_GHOSTOPS   = "GHOSTOPS"
-TXT_KIMICO     = "KIMICO"  # Nueva palabra clave para el grupo Kimico
+TXT_KIMICO     = "KIMICO BOT"  # Nueva palabra clave para el grupo Kimico
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
 USER_NORTH_BOT = "northdatabasicbot"
@@ -665,7 +665,7 @@ async def main():
         elif id_ghostops and chat_actual_id == id_ghostops: origen_texto = "GhostOps"
         elif id_north_bot and chat_actual_id == id_north_bot: origen_texto = "NORTH DATA"
         elif id_liam_bot and chat_actual_id == id_liam_bot: origen_texto = "LIAM DATA"
-        elif id_kimico and chat_actual_id == id_kimico: origen_texto = "KIMICO"  # Identifica el grupo
+        elif id_kimico and chat_actual_id == id_kimico: origen_texto = "KIMICO BOT"  # Identifica el grupo
 
         if origen_texto == "DESCONOCIDO": return
 
