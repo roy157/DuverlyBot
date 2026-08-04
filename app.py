@@ -52,7 +52,7 @@ except KeyError as e:
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
 TXT_GHOSTOPS   = "GHOSTOPS"
-TXT_KIMICO     = "KIMICO BOT"  # Nueva palabra clave para el grupo Kimico
+TXT_KIMICO     = "KIMICO BOT"
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
 USER_NORTH_BOT = "northdatabasicbot"
@@ -111,13 +111,16 @@ async def mapear_motores_por_id():
 
     print("📋 Sincronizando e indexando IDs reales de Telegram...")
 
-    # 🛑 ACTUALIZADO: Limpiamos los grupos obsoletos de la lista negra
+    # 🛑 ACTUALIZADO: Incluimos "KIMICO" en mayúsculas en la lista negra para forzarlo a ignorarlo
     GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]", "KIMICO"]
 
     async for dialog in client.iter_dialogs(limit=150):
         if dialog.name:
-            nombre_chat = dialog.name.upper().strip()
-            if any(obviar.upper() in nombre_chat for obviar in GRUPOS_A_OBVIAR):
+            nombre_real = dialog.name.strip()  # Mantenemos el nombre original para evaluar mayúsculas/minúsculas exactas
+            nombre_chat = nombre_real.upper()
+            
+            # Si el grupo se llama exactamente "KIMICO" (mayúsculas), lo salta por la lista negra
+            if any(obviar.upper() == nombre_chat for obviar in GRUPOS_A_OBVIAR):
                 continue
 
             if TXT_FRANCHESCO in nombre_chat and not entidad_franchesco:
@@ -125,16 +128,16 @@ async def mapear_motores_por_id():
                 id_franchesco = dialog.id
                 print(f"🎯 ID Franchesco Fijado: {id_franchesco} ({dialog.name})") 
 
-            # 🚀 CORRECCIÓN: Captura el nuevo grupo DF VIP 03 asegurando que coincida el texto
             elif TXT_GHOSTOPS in nombre_chat and not entidad_ghostops:
                 entidad_ghostops = dialog.input_entity
                 id_ghostops = dialog.id
                 print(f"🎯 ID GhostOps Fijado: {id_ghostops} ({dialog.name})")
 
-            elif "kimico" in nombre_chat.lower() and "bot" in nombre_chat.lower() and not entidad_kimico:
-              entidad_kimico = dialog.input_entity
-              id_kimico = dialog.id
-              print(f"🎯 ID KIMICO BOT (Habilitado) Fijado: {id_kimico} ({dialog.name})")
+            # Búsqueda estricta para capturar "Kimico bot" respetando las variaciones que mencionas
+            elif "KIMICO" in nombre_chat and "BOT" in nombre_chat and not entidad_kimico:
+                entidad_kimico = dialog.input_entity
+                id_kimico = dialog.id
+                print(f"🎯 ID KIMICO BOT Fijado: {id_kimico} ({dialog.name})")
 
     try:
         entidad_north_bot = await client.get_input_entity(USER_NORTH_BOT)
@@ -288,7 +291,7 @@ def recibir_orden_tive_global(message):
             "FRANCHESCO": False,
             "NORTH DATA": False,
             "LIAM DATA": False,
-            "KIMICO BOT": False
+            "KIMICO": False
         }
     }
 
