@@ -756,7 +756,7 @@ async def main():
                             continue
 
                     # --- FILTRO Y ASIGNACIÓN PARA EL GRUPO KIMICO ---
-                    elif origen_texto == "KIMICO":
+                    elif origen_texto == "KIMICO BOT":
                         if texto_a_buscar.strip().startswith("/"):
                             continue
 
@@ -854,7 +854,7 @@ async def main():
 
         elif event.message.text:
             # 🚀 PARSER DIRECTO LÍNEA POR LÍNEA PARA KIMICO (CON FECHA PROP)
-            if origen_texto == "KIMICO":
+            if origen_texto == "KIMICO BOT":
                 texto_raw = event.message.text
                 
                 # Ignoramos avisos o confirmaciones intermedias de Kimico
@@ -903,7 +903,7 @@ async def main():
                     f"<b>FECHA PROP :</b> <code>{val_fecha_prop}</code>"
                 )
                 bot.send_message(chat_id_hugo, mensaje_kimico, parse_mode="HTML")
-                verificar_y_marcar_respuesta(op_encontrada, "KIMICO")
+                verificar_y_marcar_respuesta(op_encontrada, "KIMICO BOT")
                 return
 
             texto_grupo = event.message.text.upper()
