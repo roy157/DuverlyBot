@@ -112,7 +112,7 @@ async def mapear_motores_por_id():
     print("📋 Sincronizando e indexando IDs reales de Telegram...")
 
     # 🛑 ACTUALIZADO: Limpiamos los grupos obsoletos de la lista negra
-    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]"]
+    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]", "KIMICO"]
 
     async for dialog in client.iter_dialogs(limit=150):
         if dialog.name:
@@ -131,10 +131,10 @@ async def mapear_motores_por_id():
                 id_ghostops = dialog.id
                 print(f"🎯 ID GhostOps Fijado: {id_ghostops} ({dialog.name})")
 
-            elif TXT_KIMICO in nombre_chat and not entidad_kimico:
-                entidad_kimico = dialog.input_entity
-                id_kimico = dialog.id
-                print(f"🎯 ID KIMICO Grupo Fijado: {id_kimico} ({dialog.name})")
+            elif "KIMICO BOT" in nombre_chat and not entidad_kimico:
+              entidad_kimico = dialog.input_entity
+              id_kimico = dialog.id
+              print(f"🎯 ID KIMICO BOT (Habilitado) Fijado: {id_kimico} ({dialog.name})")
 
     try:
         entidad_north_bot = await client.get_input_entity(USER_NORTH_BOT)
