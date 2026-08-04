@@ -860,9 +860,9 @@ async def main():
             if origen_texto == "KIMICO BOT":
                 texto_raw = event.message.text
                 
-                # Aceptamos el mensaje si contiene datos clave del reporte vehicular
+                # Aceptamos el mensaje si contiene los datos de la placa o el reporte de Kimico
                 texto_U = texto_raw.upper()
-                if not any(k in texto_U for k in ["PLACA", "OFICINA", "PARTIDA", "NOMBRE", "FECHA PROP"]):
+                if "PLACA" not in texto_U and "MARCA" not in texto_U:
                     return
 
                 val_placa = placa_detectada
