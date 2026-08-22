@@ -160,11 +160,11 @@ async def flujo_especial_north(placa, clave_operacion):
 
     north_respondido_exito[clave_operacion] = False
 
-    print(f"⏱️ [NORTH DATA] Enviando primer paso /pla {placa} para {clave_operacion}")
+    print(f"⏱️ [NORTH DATA] Enviando primer paso /tiv {placa} para {clave_operacion}")
     try:
-        await client.send_message(entidad_north_bot, f"/pla {placa}")
+        await client.send_message(entidad_north_bot, f"/tiv {placa}")
     except Exception as e: 
-        print(f"❌ Error al enviar /pla a North: {e}")
+        print(f"❌ Error al enviar /tiv a North: {e}")
 
     await asyncio.sleep(30)
 
@@ -789,13 +789,9 @@ async def main():
                 print(f"⏳ [CARGA OMITIDA POR CAPTION] Se descartó pantalla negra de North Data para {placa_detectada}.")
                 return
 
-            if origen_texto == "NORTH DATA":
-                control_operaciones[op_encontrada]["fotos_north"] = control_operaciones[op_encontrada].get("fotos_north", 0) + 1
-                num_foto = control_operaciones[op_encontrada]["fotos_north"]
-
-                if comando_origen == "TIVE" and num_foto == 1:
-                    print(f"⏳ [NORTH DATA /TIVE] 1.ª imagen de carga ignorada para {placa_detectada}.")
-                    return
+            if origen_texto == "NORTH DATA" and comando_origen == "TIVE":
+                print(f"🤫 Imagen de North Data omitida para /tive en {placa_detectada} (solo se entregan PDFs/texto).")
+                return
 
             if origen_texto == "FRANCHESCO" and comando_origen in ["TIVE", "BOLETA", "DENUNCIAS"]:
                 print(f"🤫 Imagen publicitaria de Franchesco omitida para {placa_detectada}.")
