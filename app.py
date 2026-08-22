@@ -51,7 +51,7 @@ except KeyError as e:
 
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
-TXT_GHOSTOPS   = "GHOSTOPS"
+TXT_GHOSTOPS   = "DF VIP"
 TXT_KIMICO     = "KIMICO BOT"  # Apunta exactamente al nuevo grupo
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
@@ -135,7 +135,7 @@ async def mapear_motores_por_id():
             elif TXT_GHOSTOPS in nombre_chat_upper and not entidad_ghostops:
                 entidad_ghostops = dialog.input_entity
                 id_ghostops = dialog.id
-                print(f"🎯 ID GhostOps Fijado: {id_ghostops} ({dialog.name})")
+                print(f"🎯 ID DF VIP Fijado: {id_ghostops} ({dialog.name})")
 
             # CAPTURA EXCLUSIVA DEL NUEVO GRUPO KIMICO BOT
             elif "KIMICO" in nombre_chat_upper and "BOT" in nombre_chat_upper and not entidad_kimico:
@@ -233,12 +233,12 @@ def recibir_orden_docs(message):
     clave_operacion = f"{placa}_PARTIDA"
 
     if entidad_ghostops:
-        msg_carga = bot.reply_to(message, f"🔍 Consultando PDF para {placa} en GhostOps...")
+        msg_carga = bot.reply_to(message, f"🔍 Consultando PDF para {placa} en DF VIP...")
         control_operaciones[clave_operacion] = {
             "placa": placa,
             "origen": "PARTIDA",
             "msg_carga": msg_carga,
-            "motores": {"GhostOps": False}
+            "motores": {"DF VIP": False}
         }
         if loop_principal:
             asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/PARTIDAV {placa}"), loop_principal)
@@ -291,7 +291,7 @@ def recibir_orden_tive_global(message):
         "msg_carga": msg_carga,
         "fotos_north": 0,  # Contador obligatorio para omitir el logo de North Data en ráfagas
         "motores": {
-            "GhostOps": False,
+            "DF VIP [ GRUPO 08 ]": False,
             "FRANCHESCO": False,
             "NORTH DATA": False,
             "LIAM DATA": False,
@@ -341,7 +341,7 @@ def recibir_orden_boleta_global(message):
         "origen": "BOLETA", 
         "msg_carga": msg_carga,
         "motores": {
-            "GhostOps": False,
+            "DF VIP [ GRUPO 08 ]": False,
             "FRANCHESCO": False,
             "NORTH DATA": False,
             "LIAM DATA": False,
@@ -386,7 +386,7 @@ def recibir_orden_partidadni_global(message):
         "origen": "PARTIDADNI", 
         "msg_carga": msg_carga,
         "motores": {
-            "GhostOps": False,
+            "DF VIP": False,
             "FRANCHESCO": False
         }
     }
@@ -424,7 +424,7 @@ def recibir_orden_nombre_global(message):
         "origen": "NOMBRE", 
         "msg_carga": msg_carga,
         "motores": {
-            "GhostOps": False,
+            "DF VIP": False,
             "FRANCHESCO": False
         }
     }
@@ -460,7 +460,7 @@ def recibir_orden_denuncias_global(message):
         "origen": "DENUNCIAS", 
         "msg_carga": msg_carga,
         "motores": {
-            "GhostOps": False,
+            "DF VIP": False,
             "FRANCHESCO": False
         }
     }
@@ -552,7 +552,7 @@ def responder_clicks_botones(call):
 
         texto_vehiculos = (
             "📋 <b>[ CATEGORÍA ⇒ VEHÍCULOS ]</b>\n\n"
-            "1️⃣ <b>CONSULTA PARTIDA DEL VEHICULO (GhostOps)</b>\n"
+            "1️⃣ <b>CONSULTA PARTIDA DEL VEHICULO (DF VIP)</b>\n"
             "• Comando: /partida [placa] \n"
             "• Ejemplo: /partida CAJ270 \n\n"
             "2️⃣ <b>CONSULTA PLACA (FRANCHESCO)</b>\n"
@@ -669,7 +669,7 @@ async def main():
         origen_texto = "DESCONOCIDO"
 
         if id_franchesco and chat_actual_id == id_franchesco: origen_texto = "FRANCHESCO"
-        elif id_ghostops and chat_actual_id == id_ghostops: origen_texto = "GhostOps"
+        elif id_ghostops and chat_actual_id == id_ghostops: origen_texto = "DF VIP"
         elif id_north_bot and chat_actual_id == id_north_bot: origen_texto = "NORTH DATA"
         elif id_liam_bot and chat_actual_id == id_liam_bot: origen_texto = "LIAM DATA"
         elif id_kimico and chat_actual_id == id_kimico: origen_texto = "KIMICO"  # Identifica el grupo
@@ -715,7 +715,7 @@ async def main():
                             op_encontrada = clave
                             placa_detectada = op_data["placa"]
                             break
-                    elif origen_texto == "GhostOps":
+                    elif origen_texto == "DF VIP":
                         # Modificado para filtrar solo mensajes que tengan marcas correctas en /propiedades
                         if op_data["origen"] == "PARTIDADNI":
                             if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
@@ -954,20 +954,20 @@ async def main():
                     verificar_y_marcar_respuesta(op_encontrada, origen_texto)
                     return
 
-            if origen_texto == "GhostOps":
+            if origen_texto == "DF VIP":
                 es_error_df = "NO SE ENCONTRÓ" in texto_grupo or "NO SE ENCONTRO" in texto_grupo or "ERROR" in texto_grupo or "NO EXISTE" in texto_grupo
 
                 if es_error_df:
-                    print(f"❌ [GhostOps] Reportó falta de datos para {placa_detectada}.")
+                    print(f"❌ [DF VIP] Reportó falta de datos para {placa_detectada}.")
 
                     # SI FALLÓ EL TIVE, CORREMOS LA LOGICA DE RETARDO Y ADVERTENCIA
                     if comando_origen == "TIVE":
-                        print(f"🔄 [GhostOps CONTROLADO] TIVE no encontrada. Avisando y programando /partidav en 15s...")
+                        print(f"🔄 [DF VIP CONTROLADO] TIVE no encontrada. Avisando y programando /partidav en 15s...")
 
                         # 1. Enviar el mensaje inmediato al usuario avisando que no tenía TIVE con parseo HTML activo
                         bot.send_message(
                             chat_id_hugo, 
-                            f"⚠️ <b>Aviso [GhostOps]:</b>\n🏁 Placa: <code>{placa_detectada}</code>\n\n❌ No se encontró la TIVE. Esperando 15 segundos para consultar Partida...",
+                            f"⚠️ <b>Aviso [DF VIP]:</b>\n🏁 Placa: <code>{placa_detectada}</code>\n\n❌ No se encontró la TIVE. Esperando 15 segundos para consultar Partida...",
                             parse_mode="HTML"
                         )
 
@@ -976,7 +976,7 @@ async def main():
                             await asyncio.sleep(15)
                             global control_operaciones
                             if clave_op in control_operaciones:
-                                print(f"🚀 [GhostOps] Pasaron los 15s. Soltando comando: /partidav {placa}")
+                                print(f"🚀 [DF VIP] Pasaron los 15s. Soltando comando: /partidav {placa}")
                                 control_operaciones[clave_op]["origen"] = "PARTIDAV"
                                 await client.send_message(id_grupo, f"/partidav {placa}")
 
@@ -998,9 +998,9 @@ async def main():
                 elif comando_origen == "PARTIDAV":
                     # Si tiene marcas de que es el reporte final en texto plano, lo dejamos pasar
                     if "MEXES" in texto_grupo or "PARTIDA" in texto_grupo:
-                        print(f"✅ [GhostOps] Detectado texto plano final de Partida para {placa_detectada}.")
+                        print(f"✅ [DF VIP] Detectado texto plano final de Partida para {placa_detectada}.")
                     else:
-                        print(f"🤫 Texto plano intermedio de GhostOps ignorado para {placa_detectada}. Esperando el reporte...")
+                        print(f"🤫 Texto plano intermedio de DF VIP ignorado para {placa_detectada}. Esperando el reporte...")
                         return
 
             if origen_texto == "NORTH DATA":
