@@ -55,8 +55,7 @@ TXT_GHOSTOPS   = "DF VIP"
 TXT_KIMICO     = "KIMICO BOT"  # Apunta exactamente al nuevo grupo
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
-USER_NORTH_BOT = "northdatabasicbot"
-USER_LIAM_BOT  = "Yinwodataa_botx"  
+USER_NORTH_BOT = "northdatabasicbot"  
 
 from telethon.sessions import StringSession
 
@@ -89,13 +88,11 @@ loop_principal = None
 entidad_franchesco = None
 entidad_ghostops   = None
 entidad_north_bot  = None  
-entidad_liam_bot   = None
 entidad_kimico     = None  # Nueva entidad
 
 id_franchesco = None
 id_ghostops   = None
 id_north_bot  = None
-id_liam_bot   = None
 id_kimico     = None  # Nuevo ID
 
 control_operaciones = {}
@@ -103,8 +100,8 @@ north_respondido_exito = {}
 imagenes_procesadas_recientes = []  
 
 async def mapear_motores_por_id():
-    global entidad_franchesco, entidad_ghostops, entidad_north_bot, entidad_liam_bot, entidad_kimico
-    global id_franchesco, id_ghostops, id_north_bot, id_liam_bot, id_kimico
+    global entidad_franchesco, entidad_ghostops, entidad_north_bot, entidad_kimico
+    global id_franchesco, id_ghostops, id_north_bot, id_kimico
 
     if not client.is_connected():
         await client.connect()
@@ -151,13 +148,7 @@ async def mapear_motores_por_id():
     except Exception as e:
         print(f"⚠️ Alerta North Bot: {e}")
 
-    try:
-        entidad_liam_bot = await client.get_input_entity(USER_LIAM_BOT)
-        full_liam = await client.get_entity(entidad_liam_bot)
-        id_liam_bot = full_liam.id
-        print(f"🎯 ID Liam Bot Fijado: {id_liam_bot} (@{USER_LIAM_BOT})")
-    except Exception as e:
-        print(f"⚠️ Alerta Liam: {e}")
+
 
 async def flujo_especial_north(placa, clave_operacion):
     global entidad_north_bot, north_respondido_exito, control_operaciones
@@ -272,7 +263,7 @@ def recibir_orden_imagenes(message):
 @bot.message_handler(commands=['tive'])
 def recibir_orden_tive_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
-    global entidad_ghostops, entidad_franchesco, entidad_north_bot, entidad_liam_bot, entidad_kimico
+    global entidad_ghostops, entidad_franchesco, entidad_north_bot, entidad_kimico
 
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
@@ -319,7 +310,7 @@ def recibir_orden_tive_global(message):
 @bot.message_handler(commands=['boleta'])
 def recibir_orden_boleta_global(message):
     global chat_id_hugo, loop_principal, control_operaciones
-    global entidad_ghostops, entidad_franchesco, entidad_north_bot, entidad_liam_bot
+    global entidad_ghostops, entidad_franchesco, entidad_north_bot
 
     chat_id_hugo = message.chat.id  
     texto = message.text.split()
@@ -652,7 +643,7 @@ def arrancar_bot_padre():
 # --- FUNCIÓN PRINCIPAL ASÍNCRONA ---
 async def main():
     global loop_principal, control_operaciones, north_respondido_exito
-    global id_franchesco, id_ghostops, id_north_bot, id_liam_bot
+    global id_franchesco, id_ghostops, id_north_bot
     loop_principal = asyncio.get_running_loop()
 
     await mapear_motores_por_id()
@@ -660,7 +651,7 @@ async def main():
     @client.on(events.NewMessage())
     async def escuchador_global_mensajes(event):
         global chat_id_hugo, control_operaciones, north_respondido_exito
-        global id_franchesco, id_ghostops, id_north_bot, id_liam_bot, id_kimico
+        global id_franchesco, id_ghostops, id_north_bot, id_kimico
 
         chat_actual_id = event.chat_id
         if not chat_id_hugo or not control_operaciones:
@@ -671,7 +662,6 @@ async def main():
         if id_franchesco and chat_actual_id == id_franchesco: origen_texto = "FRANCHESCO"
         elif id_ghostops and chat_actual_id == id_ghostops: origen_texto = "DF VIP"
         elif id_north_bot and chat_actual_id == id_north_bot: origen_texto = "NORTH DATA"
-        elif id_liam_bot and chat_actual_id == id_liam_bot: origen_texto = "LIAM DATA"
         elif id_kimico and chat_actual_id == id_kimico: origen_texto = "KIMICO"  # Identifica el grupo
 
         if origen_texto == "DESCONOCIDO": return
@@ -710,28 +700,22 @@ async def main():
                         else:
                             continue
 
-                    if origen_texto == "NORTH DATA" or origen_texto == "LIAM DATA":
+                    if origen_texto == "NORTH DATA":
                         if op_data["origen"] in ["TIVE", "BOLETA", "RQ"]: 
                             op_encontrada = clave
                             placa_detectada = op_data["placa"]
                             break
                     elif origen_texto == "DF VIP":
-                        # Modificado para filtrar solo mensajes que tengan marcas correctas en /propiedades
-                        if op_data["origen"] == "PARTIDADNI":
-                            if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
-                                op_encontrada = clave
-                                placa_detectada = op_data["placa"]
-                                break
-                            else:
-                                continue
-                        elif op_data["origen"] in ["PARTIDA", "PARTIDAV"]:
-                            # Aceptamos el mensaje si contiene MEXES o PARTIDA
-                            if "MEXES" in texto_a_buscar or "PARTIDA" in texto_a_buscar:
-                                op_encontrada = clave
-                                placa_detectada = op_data["placa"]
-                                break
-                            else:
-                                continue
+                        if texto_a_buscar.strip().startswith("/"):
+                            continue
+
+                        # Aceptamos reportes para TIVE, BOLETA, DENUNCIAS, PARTIDA, PARTIDAV, PARTIDADNI y NOMBRE
+                        if op_data["origen"] in ["TIVE", "BOLETA", "DENUNCIAS", "PARTIDA", "PARTIDAV", "PARTIDADNI", "NOMBRE"]:
+                            op_encontrada = clave
+                            placa_detectada = op_data["placa"]
+                            break
+                        else:
+                            continue
 
                     elif origen_texto == "FRANCHESCO":
                         # 1. Filtro especial para búsquedas por DNI / Propiedades
