@@ -615,7 +615,7 @@ def arrancar_bot_padre():
     # 1. Eliminamos cualquier webhook o consultas colgadas en los servidores de Telegram
     try:
         print("🗑️ Limpiando consultas previas en Telegram para evitar conflictos...")
-        bot.remove_webhook()
+        bot.remove_webhook(drop_pending_updates=True)
     except Exception as e:
         print(f"⚠️ Aviso al limpiar Webhook: {e}")
 
@@ -623,18 +623,17 @@ def arrancar_bot_padre():
     while True:
         try:
             print("🤖 Servidor Telebot iniciando polling infinity...")
-            # En pyTelegramBotAPI, para ignorar mensajes viejos acumulados en ráfaga se usa 'none_stop=True' 
-            # y se le pasan los parámetros de control correctos sin romper el constructor.
             bot.infinity_polling(
                 timeout=60, 
                 long_polling_timeout=60, 
+                skip_pending=True,
                 logger_level=50
             )
         except Exception as e:
             error_msg = str(e)
             if "Conflict" in error_msg or "409" in error_msg:
-                print("⏳ Conflicto 409 activo (Render aún está apagando la versión anterior). Reintentando en 8 segundos...")
-                time.sleep(8)
+                print("⏳ Conflicto 409 activo (Render aún está apagando la versión anterior o hay otra instancia ejecutándose). Reintentando en 10 segundos...")
+                time.sleep(10)
             else:
                 print(f"❌ Error en hilo de Telebot: {e}. Reiniciando en 5s...")
                 time.sleep(5)
