@@ -612,6 +612,9 @@ def responder_clicks_botones(call):
 import time
 
 def arrancar_bot_padre():
+    # Desactivamos tracebacks ruidosos del logger interno de TeleBot ante reconexiones
+    telebot.logger.setLevel(50)
+
     # 1. Eliminamos cualquier webhook o consultas colgadas en los servidores de Telegram
     try:
         print("🗑️ Limpiando consultas previas en Telegram para evitar conflictos...")
@@ -787,7 +790,7 @@ async def main():
             verificar_y_marcar_respuesta(op_encontrada, origen_texto)
             return
 
-        elif event.message.media and event.message.photo and origen_texto in ["FRANCHESCO", "NORTH DATA"]:
+        elif event.message.media and event.message.photo and origen_texto in ["FRANCHESCO", "NORTH DATA", "DF VIP"]:
             comando_origen = control_operaciones[op_encontrada]["origen"]
             caption_proveedor = event.message.message if event.message.message else ""
 
