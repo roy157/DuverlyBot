@@ -46,7 +46,7 @@ except KeyError as e:
 # 🔍 PALABRAS CLAVE PARA ENCONTRAR LOS GRUPOS TRADICIONALES
 TXT_FRANCHESCO = "FRANCHESCO"
 TXT_GHOSTOPS   = "DF VIP"      # Detecta DF VIP [ GRUPO 08 ]
-TXT_KIMICO     = "KIMICO BOT"  # Apunta exactamente al nuevo grupo
+TXT_KIMICO     = "KIMICO BOTx"  # Apunta exactamente al nuevo grupo
 
 # 🤖 USERNAMES PARA LOS BOTS DIRECTOS CHAT UNO A UNO
 USER_NORTH_BOT = "northdatabasicbot"
