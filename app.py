@@ -298,7 +298,7 @@ def recibir_orden_tive_global(message):
     if entidad_ghostops:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/tive {placa}"), loop_principal)
     if entidad_kimico:
-        asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/pla {placa}"), loop_principal)
+       # asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/pla {placa}"), loop_principal)
     if entidad_north_bot:
         asyncio.run_coroutine_threadsafe(flujo_especial_north(placa, clave_operacion), loop_principal)
 
