@@ -43,7 +43,7 @@ except KeyError as e:
 
 TXT_FRANCHESCO = "FRANCHESCO"
 TXT_GHOSTOPS   = "DF VIP"
-TXT_KIMICO     = "K1M1CO B0Tx"
+# TXT_KIMICO     = "K1M1CO B0Tx"  # [PAUSADO]
 
 USER_NORTH_BOT = "northdatabasicbot"
 USER_LIAM_BOT  = "Yinwodataa_botx"
@@ -105,9 +105,6 @@ async def mapear_motores_por_id():
             if any(obviar.upper() in nombre_chat_upper for obviar in GRUPOS_A_OBVIAR):
                 continue
 
-            if "KIMICO" in nombre_chat_upper and "BOT" not in nombre_chat_upper:
-                continue
-
             if TXT_FRANCHESCO in nombre_chat_upper and not entidad_franchesco:
                 entidad_franchesco = dialog.input_entity
                 id_franchesco = dialog.id
@@ -118,10 +115,11 @@ async def mapear_motores_por_id():
                 id_ghostops = dialog.id
                 print(f"🎯 ID DF VIP [GRUPO 08] Fijado: {id_ghostops} ({dialog.name})")
 
-            elif "KIMICO" in nombre_chat_upper and "BOT" in nombre_chat_upper and not entidad_kimico:
-                entidad_kimico = dialog.input_entity
-                id_kimico = dialog.id
-                print(f"🎯 ID KIMICO BOT Fijado: {id_kimico} ({dialog.name})")
+            # --- KIMICO PAUSADO TEMPORALMENTE ---
+            # elif "KIMICO" in nombre_chat_upper and "BOT" in nombre_chat_upper and not entidad_kimico:
+            #     entidad_kimico = dialog.input_entity
+            #     id_kimico = dialog.id
+            #     print(f"🎯 ID KIMICO BOT Fijado: {id_kimico} ({dialog.name})")
 
     try:
         entidad_north_bot = await client.get_input_entity(USER_NORTH_BOT)
@@ -194,7 +192,7 @@ def verificar_y_marcar_respuesta(clave_operacion, motor):
         liberar_operacion_de_memoria(clave_operacion)
 
 # =====================================================================
-# --- COMANDOS DISPONIBLES ---
+# --- SECCIÓN DE COMANDOS ---
 # =====================================================================
 
 @bot.message_handler(commands=['partida'])
@@ -259,7 +257,7 @@ def recibir_orden_tive_global(message):
 
     placa = texto[1].upper().strip().replace("-", "").replace(" ", "")
     clave_operacion = f"{placa}_TIVE"
-    msg_carga = bot.reply_to(message, f"⚡ ¡Ráfaga /tive activada para {placa}!\nDisparando consultas...")
+    msg_carga = bot.reply_to(message, f"⚡ ¡Ráfaga /tive activada para {placa}!\nDisparando consultas a los proveedores...")
 
     if not loop_principal: return
     control_operaciones[clave_operacion] = {
@@ -272,7 +270,7 @@ def recibir_orden_tive_global(message):
             "FRANCHESCO": False,
             "NORTH DATA": False,
             "LIAM DATA": False
-            # "KIMICO": False (Pausado temporalmente)
+            # "KIMICO": False  <-- [PAUSADO]
         }
     }
 
@@ -280,8 +278,11 @@ def recibir_orden_tive_global(message):
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_franchesco, f"/tive {placa}"), loop_principal)
     if entidad_ghostops:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/tive {placa}"), loop_principal)
+    
+    # --- KIMICO PAUSADO TEMPORALMENTE ---
     # if entidad_kimico:
     #     asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/pla {placa}"), loop_principal)
+    
     if entidad_north_bot:
         asyncio.run_coroutine_threadsafe(flujo_especial_north(placa, clave_operacion), loop_principal)
 
@@ -302,9 +303,9 @@ def recibir_orden_boleta_global(message):
     clave_operacion = f"{placa}_BOLETA"
     msg_carga = None
     try:
-        msg_carga = bot.reply_to(message, f"🧾 ¡Ráfaga /boleta activada para {placa}!\nConsultando boletas...")
-    except Exception as e:
-        print(f"⚠️ Aviso red: {e}")
+        msg_carga = bot.reply_to(message, f"🧾 ¡Ráfaga /boleta activada para {placa}!\nDisparando consultas de boletas informativas...")
+    except Exception as network_error:
+        print(f"⚠️ Aviso de red: {network_error}")
 
     if not loop_principal: return
     control_operaciones[clave_operacion] = {
@@ -316,7 +317,7 @@ def recibir_orden_boleta_global(message):
             "FRANCHESCO": False,
             "NORTH DATA": False,
             "LIAM DATA": False
-            # "KIMICO": False (Pausado temporalmente)
+            # "KIMICO": False  <-- [PAUSADO]
         }
     }
 
@@ -324,8 +325,11 @@ def recibir_orden_boleta_global(message):
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_franchesco, f"/boi {placa}"), loop_principal)
     if entidad_ghostops:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_ghostops, f"/boi {placa}"), loop_principal)
+    
+    # --- KIMICO PAUSADO TEMPORALMENTE ---
     # if entidad_kimico:
     #     asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/boleta {placa}"), loop_principal)
+    
     if entidad_north_bot:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_north_bot, f"/bolif {placa}"), loop_principal)
 
@@ -347,8 +351,8 @@ def recibir_orden_partidadni_global(message):
     msg_carga = None
     try:
         msg_carga = bot.reply_to(message, f"📑 ¡Ráfaga /propiedades activada para DNI: {dni}!\nConsultando...")
-    except Exception as e:
-        print(f"⚠️ Aviso red: {e}")
+    except Exception as network_error:
+        print(f"⚠️ Aviso de red: {network_error}")
 
     if not loop_principal: return
     control_operaciones[clave_operacion] = {
@@ -387,8 +391,8 @@ def recibir_orden_nombre_global(message):
     msg_carga = None
     try:
         msg_carga = bot.reply_to(message, f"👤 Búsqueda por Nombre activada: {nombre_original}\nFormato: `/nm {nombre_formateado}`")
-    except Exception as e:
-        print(f"⚠️ Aviso red: {e}")
+    except Exception as network_error:
+        print(f"⚠️ Aviso de red: {network_error}")
 
     if not loop_principal: return
     control_operaciones[clave_operacion] = {
@@ -423,9 +427,9 @@ def recibir_orden_denuncias_global(message):
     clave_operacion = f"{placa}_DENUNCIAS"
     msg_carga = None
     try:
-        msg_carga = bot.reply_to(message, f"🚨 ¡Ráfaga /denuncias activada para {placa}!\nConsultando denuncias...")
-    except Exception as e:
-        print(f"⚠️ Aviso red: {e}")
+        msg_carga = bot.reply_to(message, f"🚨 ¡Ráfaga /denuncias activada para {placa}!\nConsultando antecedentes...")
+    except Exception as network_error:
+        print(f"⚠️ Aviso de red: {network_error}")
 
     if not loop_principal: return
     control_operaciones[clave_operacion] = {
@@ -460,9 +464,9 @@ def recibir_orden_rq_global(message):
     clave_operacion = f"{placa}_RQ"
     msg_carga = None
     try:
-        msg_carga = bot.reply_to(message, f"🔍 ¡Consulta /rq activada para {placa}!\nDisparando solicitud a North Data...")
-    except Exception as e:
-        print(f"⚠️ Aviso red: {e}")
+        msg_carga = bot.reply_to(message, f"🔍 ¡Consulta /rq activada para {placa}!\nDisparando solicitud...")
+    except Exception as network_error:
+        print(f"⚠️ Aviso de red: {network_error}")
 
     if not loop_principal: return
     control_operaciones[clave_operacion] = {
@@ -471,12 +475,14 @@ def recibir_orden_rq_global(message):
         "msg_carga": msg_carga,
         "motores": {
             "NORTH DATA": False
-            # "KIMICO": False (Pausado temporalmente)
+            # "KIMICO": False  <-- [PAUSADO]
         }
     }
 
     if entidad_north_bot:
         asyncio.run_coroutine_threadsafe(client.send_message(entidad_north_bot, f"/rqpla {placa}"), loop_principal)
+    
+    # --- KIMICO PAUSADO TEMPORALMENTE ---
     # if entidad_kimico:
     #     asyncio.run_coroutine_threadsafe(client.send_message(entidad_kimico, f"/rqpla {placa}"), loop_principal)
 
@@ -630,7 +636,7 @@ async def main():
         elif id_ghostops and chat_actual_id == id_ghostops: origen_texto = "DF VIP"
         elif id_north_bot and chat_actual_id == id_north_bot: origen_texto = "NORTH DATA"
         elif id_liam_bot and chat_actual_id == id_liam_bot: origen_texto = "LIAM DATA"
-        elif id_kimico and chat_actual_id == id_kimico: origen_texto = "KIMICO"
+        # elif id_kimico and chat_actual_id == id_kimico: origen_texto = "KIMICO"  # [PAUSADO]
 
         if origen_texto == "DESCONOCIDO": return
 
@@ -683,12 +689,6 @@ async def main():
                             op_encontrada = clave
                             placa_detectada = op_data["placa"]
                             break
-                    elif origen_texto == "KIMICO":
-                        if not texto_a_buscar.strip().startswith("/"):
-                            if op_data["origen"] in ["TIVE", "RQ", "BOLETA", "PLACA"]:
-                                op_encontrada = clave
-                                placa_detectada = op_data["placa"]
-                                break
 
         if not op_encontrada:
             return
@@ -754,46 +754,6 @@ async def main():
 
         # Entrega de Texto
         elif event.message.text:
-            if origen_texto == "KIMICO":
-                texto_raw = event.message.text
-                if "CONSULTA DE PLACA" not in texto_raw.upper() and "PROPIETARIO" not in texto_raw.upper():
-                    return
-
-                val_placa = placa_detectada
-                val_oficina = "NO REGISTRA"
-                val_partida = "NO REGISTRA"
-                val_nombre = "NO REGISTRA"
-                val_doc = "NO REGISTRA"
-                val_fecha_prop = "NO REGISTRA"
-
-                for linea in texto_raw.split("\n"):
-                    linea_limpia = linea.replace("`", "").replace("*", "").replace("_", "").strip()
-                    if ":" in linea_limpia:
-                        clave, valor = linea_limpia.split(":", 1)
-                        clave_u = clave.upper().strip()
-                        valor_txt = valor.strip()
-                        if not valor_txt: continue
-
-                        if clave_u == "PLACA": val_placa = valor_txt
-                        elif clave_u == "OFICINA": val_oficina = valor_txt
-                        elif "PARTIDA" in clave_u: val_partida = valor_txt
-                        elif clave_u == "NOMBRE": val_nombre = valor_txt
-                        elif clave_u == "DOC": val_doc = valor_txt
-                        elif "FECHA PROP" in clave_u: val_fecha_prop = valor_txt
-
-                mensaje_kimico = (
-                    f"📢 <b>Respuesta de [KIMICO]:</b>\n\n"
-                    f"<b>PLACA :</b> <code>{val_placa}</code>\n"
-                    f"<b>OFICINA :</b> {val_oficina}\n"
-                    f"<b>N° PARTIDA :</b> <code>{val_partida}</code>\n"
-                    f"<b>NOMBRE :</b> {val_nombre}\n"
-                    f"<b>DOC :</b> {val_doc}\n"
-                    f"<b>FECHA PROP :</b> <code>{val_fecha_prop}</code>"
-                )
-                bot.send_message(chat_id_hugo, mensaje_kimico, parse_mode="HTML")
-                verificar_y_marcar_respuesta(op_encontrada, "KIMICO")
-                return
-
             texto_grupo = event.message.text.upper()
 
             if texto_grupo.startswith(('/TIVE', '/TIV', '/PLA', '/PARTI', '/BOI', '/BOLI', '/BOLETA', '/DENPLA', '/DENUNV', '/PROP')) and len(texto_grupo) < 15 and "NO SE" not in texto_grupo:
