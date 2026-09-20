@@ -96,7 +96,7 @@ async def mapear_motores_por_id():
         await client.connect()
 
     print("📋 Sincronizando e indexando IDs reales de Telegram...")
-    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 05 ]"]
+    GRUPOS_A_OBVIAR = ["CANAL FRANCHESCO DATA SAC", "FRANCHESCO MASTER", "DF VIP [ GRUPO 08 ]"]
 
     async for dialog in client.iter_dialogs(limit=150):
         if dialog.name:
